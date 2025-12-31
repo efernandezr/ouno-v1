@@ -1,0 +1,226 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Loader2, ArrowLeft, Sparkles } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { VoiceRecorder, TranscriptPreview } from "@/components/voice";
+
+type RecordingStage = "recording" | "uploading" | "transcribing" | "complete";
+
+/**
+ * Safely parse JSON from a Response, returning null if parsing fails.
+ * Handles cases where server returns HTML error pages instead of JSON.
+ */
+async function safeParseJSON(response: Response): Promise<{ error?: string } | null> {
+  try {
+    const text = await response.text();
+    // Check if response looks like HTML (error page)
+    if (text.startsWith("<!DOCTYPE") || text.startsWith("<html")) {
+      console.error("Received HTML instead of JSON:", text.substring(0, 200));
+      return null;
+    }
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+interface TranscriptionResult {
+  transcript: string;
+  durationSeconds: number;
+  wordTimestamps: Array<{
+    word: string;
+    start: number;
+    end: number;
+    confidence: number;
+  }>;
+  language?: string;
+}
+
+/**
+ * Quick Capture Page
+ *
+ * 2-minute maximum spontaneous recording for capturing immediate thoughts.
+ * No prompts, just pure voice capture and transcription.
+ */
+export default function QuickCapturePage() {
+  const router = useRouter();
+  const [stage, setStage] = useState<RecordingStage>("recording");
+  const [error, setError] = useState<string | null>(null);
+  const [transcription, setTranscription] = useState<TranscriptionResult | null>(null);
+
+  const handleRecordingComplete = async (audioBlob: Blob, _duration: number) => {
+    setError(null);
+    setStage("uploading");
+
+    try {
+      // Step 1: Upload the audio file
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "recording.webm");
+      formData.append("mode", "quick");
+
+      const uploadResponse = await fetch("/api/voice/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        const errorData = await safeParseJSON(uploadResponse);
+        throw new Error(errorData?.error || `Upload failed (${uploadResponse.status})`);
+      }
+
+      const uploadResult = await uploadResponse.json();
+
+      // Step 2: Transcribe the audio
+      setStage("transcribing");
+
+      const transcribeResponse = await fetch("/api/voice/transcribe", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          uploadId: uploadResult.uploadId,
+          audioUrl: uploadResult.url,
+        }),
+      });
+
+      if (!transcribeResponse.ok) {
+        const errorData = await safeParseJSON(transcribeResponse);
+        throw new Error(errorData?.error || `Transcription failed (${transcribeResponse.status})`);
+      }
+
+      const transcriptionResult: TranscriptionResult = await transcribeResponse.json();
+      setTranscription(transcriptionResult);
+      setStage("complete");
+    } catch (err) {
+      console.error("Recording processing error:", err);
+      setError(err instanceof Error ? err.message : "An error occurred");
+      setStage("recording");
+    }
+  };
+
+  const handleCancel = () => {
+    router.push("/record");
+  };
+
+  const handleStartOver = () => {
+    setTranscription(null);
+    setError(null);
+    setStage("recording");
+  };
+
+  const handleGenerateContent = () => {
+    // TODO: Navigate to content generation with transcription data
+    // For now, we'll just go to dashboard
+    router.push("/dashboard");
+  };
+
+  // Processing states
+  if (stage === "uploading" || stage === "transcribing") {
+    return (
+      <main className="flex-1 container mx-auto px-4 py-8">
+        <div className="max-w-md mx-auto">
+          <div className="text-center space-y-6 py-12">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+            <div className="space-y-2">
+              <h2 className="text-xl font-semibold">
+                {stage === "uploading" ? "Uploading..." : "Transcribing..."}
+              </h2>
+              <p className="text-muted-foreground">
+                {stage === "uploading"
+                  ? "Uploading your recording to the cloud"
+                  : "Converting your voice to text with AI"}
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // Complete state with transcript
+  if (stage === "complete" && transcription) {
+    return (
+      <main className="flex-1 container mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/record">
+                <ArrowLeft className="h-4 w-4" />
+                <span className="sr-only">Back</span>
+              </Link>
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">Quick Capture Complete</h1>
+              <p className="text-muted-foreground">
+                Your thoughts have been captured and transcribed
+              </p>
+            </div>
+          </div>
+
+          {/* Transcript Preview */}
+          <TranscriptPreview
+            transcript={transcription.transcript}
+            duration={transcription.durationSeconds}
+            wordCount={transcription.wordTimestamps.length}
+          />
+
+          {/* Actions */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button onClick={handleGenerateContent} className="flex-1 gap-2">
+              <Sparkles className="h-4 w-4" />
+              Generate Content
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleStartOver}
+              className="flex-1"
+            >
+              Record Again
+            </Button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // Recording state
+  return (
+    <main className="flex-1 container mx-auto px-4 py-8">
+      <div className="max-w-md mx-auto space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl font-bold">Quick Capture</h1>
+          <p className="text-muted-foreground">
+            Speak your thoughts freely. Up to 2 minutes.
+          </p>
+        </div>
+
+        {/* Error Alert */}
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Voice Recorder */}
+        <VoiceRecorder
+          mode="quick"
+          maxDuration={120} // 2 minutes
+          onComplete={handleRecordingComplete}
+          onCancel={handleCancel}
+        />
+
+        {/* Tips */}
+        <div className="text-center text-sm text-muted-foreground">
+          <p>Tip: Speak naturally as if explaining to a friend.</p>
+        </div>
+      </div>
+    </main>
+  );
+}

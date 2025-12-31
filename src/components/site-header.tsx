@@ -1,9 +1,17 @@
+"use client";
+
 import Link from "next/link";
-import { Bot } from "lucide-react";
+import { Mic } from "lucide-react";
 import { UserProfile } from "@/components/auth/user-profile";
+import { useSession } from "@/lib/auth-client";
 import { ModeToggle } from "./ui/mode-toggle";
 
 export function SiteHeader() {
+  const { data: session } = useSession();
+
+  // Link to dashboard if logged in, otherwise to landing page
+  const logoHref = session?.user ? "/dashboard" : "/";
+
   return (
     <>
       {/* Skip to main content link for accessibility */}
@@ -20,18 +28,18 @@ export function SiteHeader() {
         >
           <h1 className="text-2xl font-bold">
             <Link
-              href="/"
+              href={logoHref}
               className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors"
-              aria-label="Starter Kit - Go to homepage"
+              aria-label={session?.user ? "VoiceDNA - Go to dashboard" : "VoiceDNA - Go to homepage"}
             >
               <div
                 className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10"
                 aria-hidden="true"
               >
-                <Bot className="h-5 w-5" />
+                <Mic className="h-5 w-5" />
               </div>
               <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                Starter Kit
+                VoiceDNA
               </span>
             </Link>
           </h1>

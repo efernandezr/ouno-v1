@@ -25,7 +25,7 @@ export interface StorageConfig {
  * Default storage configuration
  */
 const DEFAULT_CONFIG: Required<StorageConfig> = {
-  maxSize: 5 * 1024 * 1024, // 5MB
+  maxSize: 25 * 1024 * 1024, // 25MB (Whisper API limit)
   allowedTypes: [
     // Images
     "image/jpeg",
@@ -38,6 +38,14 @@ const DEFAULT_CONFIG: Required<StorageConfig> = {
     "text/plain",
     "text/csv",
     "application/json",
+    // Audio (for voice uploads)
+    "audio/webm",
+    "audio/mp4",
+    "audio/mpeg",
+    "audio/wav",
+    "audio/ogg",
+    "audio/m4a",
+    "audio/x-m4a",
   ],
 };
 
@@ -45,16 +53,26 @@ const DEFAULT_CONFIG: Required<StorageConfig> = {
  * Allowed file extensions mapped from MIME types
  */
 const ALLOWED_EXTENSIONS = new Set([
+  // Images
   ".jpg",
   ".jpeg",
   ".png",
   ".gif",
   ".webp",
   ".svg",
+  // Documents
   ".pdf",
   ".txt",
   ".csv",
   ".json",
+  // Audio
+  ".webm",
+  ".mp4",
+  ".mp3",
+  ".mpeg",
+  ".wav",
+  ".ogg",
+  ".m4a",
 ]);
 
 /**
