@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Sparkles, Clock, User, Mic } from "lucide-react";
-import { LogoMark } from "@/components/brand/OunoLogo";
+import { OunoLogo } from "@/components/brand/OunoLogo";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
@@ -10,14 +10,9 @@ export default function Home() {
       <section className="container mx-auto px-4 py-16 md:py-24">
         <div className="max-w-4xl mx-auto text-center space-y-8">
           <div className="space-y-4">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <LogoMark size="lg" className="w-14 h-14 rounded-2xl" />
+            <div className="flex items-center justify-center mb-4">
+              <OunoLogo size="lg" />
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
-              <span className="bg-gradient-to-r from-primary via-primary/90 to-primary/70 bg-clip-text text-transparent">
-                Ouno
-              </span>
-            </h1>
             <p className="text-xl md:text-2xl font-medium text-foreground max-w-2xl mx-auto">
               Your Authentic Intelligence
             </p>
