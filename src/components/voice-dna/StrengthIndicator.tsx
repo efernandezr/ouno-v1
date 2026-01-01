@@ -23,23 +23,23 @@ function getCalibrationLevel(score: number): {
     return {
       level: "high",
       label: "Well Calibrated",
-      color: "text-green-600 dark:text-green-400",
-      bgColor: "bg-green-500",
+      color: "text-success",
+      bgColor: "bg-success",
     };
   }
   if (score >= 30) {
     return {
       level: "medium",
       label: "Getting There",
-      color: "text-yellow-600 dark:text-yellow-400",
-      bgColor: "bg-yellow-500",
+      color: "text-warning",
+      bgColor: "bg-warning",
     };
   }
   return {
     level: "low",
     label: "Needs More Data",
-    color: "text-red-600 dark:text-red-400",
-    bgColor: "bg-red-500",
+    color: "text-destructive",
+    bgColor: "bg-destructive",
   };
 }
 
@@ -172,10 +172,10 @@ export function StrengthIndicatorCircle({
           className={cn(
             "transition-all duration-500 ease-out",
             calibration.level === "high"
-              ? "stroke-green-500"
+              ? "stroke-success"
               : calibration.level === "medium"
-                ? "stroke-yellow-500"
-                : "stroke-red-500"
+                ? "stroke-warning"
+                : "stroke-destructive"
           )}
         />
       </svg>
@@ -204,10 +204,10 @@ export function StrengthBadge({
       className={cn(
         "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
         calibration.level === "high"
-          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+          ? "bg-success/10 text-success"
           : calibration.level === "medium"
-            ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-            : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+            ? "bg-warning/10 text-warning"
+            : "bg-destructive/10 text-destructive",
         className
       )}
     >
@@ -215,10 +215,10 @@ export function StrengthBadge({
         className={cn(
           "w-1.5 h-1.5 rounded-full",
           calibration.level === "high"
-            ? "bg-green-500"
+            ? "bg-success"
             : calibration.level === "medium"
-              ? "bg-yellow-500"
-              : "bg-red-500"
+              ? "bg-warning"
+              : "bg-destructive"
         )}
       />
       {score}%

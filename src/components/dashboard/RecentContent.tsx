@@ -152,9 +152,9 @@ function ContentCard({ item }: { item: ContentItem }) {
 
 function StatusBadge({ status }: { status: ContentItem["status"] }) {
   const variants: Record<ContentItem["status"], { label: string; className: string }> = {
-    draft: { label: "Draft", className: "bg-yellow-500/10 text-yellow-600" },
-    final: { label: "Final", className: "bg-green-500/10 text-green-600" },
-    published: { label: "Published", className: "bg-blue-500/10 text-blue-600" },
+    draft: { label: "Draft", className: "bg-warning/10 text-warning" },
+    final: { label: "Final", className: "bg-success/10 text-success" },
+    published: { label: "Published", className: "bg-info/10 text-info" },
   };
 
   const { label, className } = variants[status];

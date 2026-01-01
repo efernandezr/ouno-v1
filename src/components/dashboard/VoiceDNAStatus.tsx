@@ -179,9 +179,9 @@ export function VoiceDNAStatus() {
 
 function CalibrationBadge({ level }: { level: "low" | "medium" | "high" }) {
   const config = {
-    low: { label: "Building", className: "text-yellow-600 bg-yellow-500/10" },
-    medium: { label: "Learning", className: "text-blue-600 bg-blue-500/10" },
-    high: { label: "Calibrated", className: "text-green-600 bg-green-500/10" },
+    low: { label: "Building", className: "text-warning bg-warning/10" },
+    medium: { label: "Learning", className: "text-info bg-info/10" },
+    high: { label: "Calibrated", className: "text-success bg-success/10" },
   };
 
   const { label, className } = config[level];
