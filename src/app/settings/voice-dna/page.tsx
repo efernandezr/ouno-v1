@@ -9,8 +9,10 @@ import {
   ChevronLeft,
   AlertCircle,
   Trash2,
+  FileText,
 } from "lucide-react";
 import { UserProfile } from "@/components/auth/user-profile";
+import { WritingSamplesSection } from "@/components/samples";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -55,7 +57,7 @@ export default function VoiceDNASettingsPage() {
       setError(null);
       const response = await fetch("/api/voice-dna");
       if (!response.ok) {
-        throw new Error("Failed to fetch Voice DNA");
+        throw new Error("Failed to fetch Ouno Core profile");
       }
       const result = await response.json();
       setData(result);
@@ -88,7 +90,7 @@ export default function VoiceDNASettingsPage() {
             <Lock className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
             <h1 className="text-2xl font-bold mb-2">Sign In Required</h1>
             <p className="text-muted-foreground mb-6">
-              Please sign in to access your Voice DNA settings
+              Please sign in to access your Ouno Core settings
             </p>
           </div>
           <UserProfile />
@@ -98,7 +100,7 @@ export default function VoiceDNASettingsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 pb-24 md:pb-8">
       <div className="max-w-4xl mx-auto">
         {/* Header with back button */}
         <div className="mb-8">
@@ -115,7 +117,7 @@ export default function VoiceDNASettingsPage() {
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-3">
                 <Mic className="h-8 w-8 text-primary" />
-                Voice DNA Settings
+                Ouno Core Settings
               </h1>
               <p className="text-muted-foreground mt-2">
                 View and manage your voice profile
@@ -141,7 +143,7 @@ export default function VoiceDNASettingsPage() {
             <CardContent className="flex items-center gap-3 py-4">
               <AlertCircle className="h-5 w-5 text-destructive" />
               <div>
-                <p className="font-medium">Failed to load Voice DNA</p>
+                <p className="font-medium">Failed to load Ouno Core</p>
                 <p className="text-sm text-muted-foreground">{error}</p>
               </div>
               <Button variant="outline" size="sm" onClick={fetchVoiceDNA}>
@@ -167,7 +169,7 @@ export default function VoiceDNASettingsPage() {
               <CardHeader>
                 <CardTitle>Calibration Progress</CardTitle>
                 <CardDescription>
-                  Your Voice DNA improves with more recordings and calibration
+                  Your Ouno Core improves with more recordings and calibration
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -224,6 +226,23 @@ export default function VoiceDNASettingsPage() {
                     </ul>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Writing Samples Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Writing Samples
+                </CardTitle>
+                <CardDescription>
+                  Add writing samples to improve how well generated content
+                  matches your style
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <WritingSamplesSection onSamplesChange={fetchVoiceDNA} />
               </CardContent>
             </Card>
 
@@ -291,11 +310,11 @@ export default function VoiceDNASettingsPage() {
                 <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                   <Mic className="h-16 w-16 text-muted-foreground/50 mb-4" />
                   <h3 className="text-lg font-semibold mb-2">
-                    No Voice DNA Profile Yet
+                    No Ouno Core Profile Yet
                   </h3>
                   <p className="text-muted-foreground mb-6 max-w-md">
-                    Start by recording your first voice session. The system will
-                    analyze your speaking patterns to build your unique Voice DNA.
+                    Start by recording your first Spark. The system will
+                    analyze your speaking patterns to build your unique Ouno Core.
                   </p>
                   <Button onClick={() => router.push("/record")}>
                     <Mic className="h-4 w-4 mr-2" />

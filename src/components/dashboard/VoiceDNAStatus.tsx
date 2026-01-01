@@ -22,7 +22,7 @@ interface VoiceDNAStats {
 /**
  * VoiceDNAStatus Component
  *
- * Dashboard widget showing Voice DNA calibration status
+ * Dashboard widget showing Ouno Core calibration status
  * with quick stats and CTA for improvement.
  */
 export function VoiceDNAStatus() {
@@ -34,7 +34,7 @@ export function VoiceDNAStatus() {
     async function fetchStats() {
       try {
         const response = await fetch("/api/voice-dna");
-        if (!response.ok) throw new Error("Failed to fetch Voice DNA");
+        if (!response.ok) throw new Error("Failed to fetch Ouno Core");
 
         const data = await response.json();
         setStats({
@@ -77,7 +77,7 @@ export function VoiceDNAStatus() {
       <div className="p-6 rounded-xl border bg-card">
         <div className="flex items-center gap-3 text-sm text-destructive">
           <AlertCircle className="h-5 w-5" />
-          <span>Failed to load Voice DNA status</span>
+          <span>Failed to load Ouno Core status</span>
         </div>
       </div>
     );
@@ -91,7 +91,7 @@ export function VoiceDNAStatus() {
             <Mic className="h-6 w-6 text-primary" />
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold">Build Your Voice DNA</h3>
+            <h3 className="font-semibold">Build Your Ouno Core</h3>
             <p className="text-sm text-muted-foreground mt-1">
               Complete your first recording to start building your unique voice profile.
             </p>
@@ -118,14 +118,14 @@ export function VoiceDNAStatus() {
             <Mic className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-semibold">Voice DNA</h3>
+            <h3 className="font-semibold">Ouno Core</h3>
             <CalibrationBadge level={stats.calibrationLevel} />
           </div>
         </div>
         <Link
           href="/settings/voice-dna"
           className="p-2 rounded-lg hover:bg-muted transition-colors"
-          aria-label="Voice DNA settings"
+          aria-label="Ouno Core settings"
         >
           <Settings className="h-5 w-5 text-muted-foreground" />
         </Link>

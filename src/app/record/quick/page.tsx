@@ -41,12 +41,12 @@ interface TranscriptionResult {
 }
 
 /**
- * Quick Capture Page
+ * Thought Stream Page
  *
  * 2-minute maximum spontaneous recording for capturing immediate thoughts.
  * No prompts, just pure voice capture and transcription.
  */
-export default function QuickCapturePage() {
+export default function ThoughtStreamPage() {
   const router = useRouter();
   const [stage, setStage] = useState<RecordingStage>("recording");
   const [error, setError] = useState<string | null>(null);
@@ -183,8 +183,8 @@ export default function QuickCapturePage() {
         description: "Setting up your content session",
       },
       generating: {
-        title: "Generating Content...",
-        description: "Creating your article using your Voice DNA",
+        title: "Synthesizing...",
+        description: "Creating your article using your Ouno Core",
       },
     };
 
@@ -219,7 +219,7 @@ export default function QuickCapturePage() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">Quick Capture Complete</h1>
+              <h1 className="text-2xl font-bold">Thought Stream Complete</h1>
               <p className="text-muted-foreground">
                 Your thoughts have been captured and transcribed
               </p>
@@ -258,7 +258,7 @@ export default function QuickCapturePage() {
       <div className="max-w-md mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold">Quick Capture</h1>
+          <h1 className="text-2xl font-bold">Thought Stream</h1>
           <p className="text-muted-foreground">
             Speak your thoughts freely. Up to 2 minutes.
           </p>

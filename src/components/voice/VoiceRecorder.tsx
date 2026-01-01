@@ -166,8 +166,8 @@ export function VoiceRecorder({
       <Card className="w-full max-w-md mx-auto">
         <CardHeader className="relative">
           <CardTitle className="text-center">
-            {mode === "quick" && "Quick Capture"}
-            {mode === "guided" && "Guided Session"}
+            {mode === "quick" && "Thought Stream"}
+            {mode === "guided" && "Deep Dive"}
             {mode === "follow_up" && "Follow-up Response"}
             {mode === "calibration" && "Calibration"}
           </CardTitle>

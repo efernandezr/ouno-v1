@@ -301,7 +301,7 @@ export default function SessionPage({ params }: SessionPageProps) {
       </div>
 
       {/* Main content */}
-      <main className="container mx-auto px-4 pb-8">
+      <main className="container mx-auto px-4 pb-24 md:pb-8">
         {/* Error banner */}
         {error && (
           <Alert variant="destructive" className="mb-6 max-w-lg mx-auto">

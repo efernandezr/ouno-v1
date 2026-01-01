@@ -42,7 +42,7 @@ export default async function OnboardingPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <main className="flex-1 container max-w-2xl mx-auto py-8 px-4">
+      <main className="flex-1 container max-w-2xl mx-auto py-8 px-4 pb-24 md:pb-8">
         <OnboardingWizard
           userId={session.user.id}
           initialStep={initialStep}

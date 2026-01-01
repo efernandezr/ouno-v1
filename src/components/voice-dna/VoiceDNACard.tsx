@@ -110,7 +110,7 @@ function CompactVoiceDNACard({
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
             <Mic className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-base">Voice DNA</CardTitle>
+            <CardTitle className="text-base">Ouno Core</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -128,7 +128,7 @@ function CompactVoiceDNACard({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Mic className="h-4 w-4 text-primary" />
-            <CardTitle className="text-base">Voice DNA</CardTitle>
+            <CardTitle className="text-base">Ouno Core</CardTitle>
           </div>
           <Badge
             variant={
@@ -206,7 +206,7 @@ export function VoiceDNACard({
         <CardHeader>
           <div className="flex items-center gap-2">
             <Mic className="h-5 w-5 text-muted-foreground" />
-            <CardTitle>Voice DNA Profile</CardTitle>
+            <CardTitle>Ouno Core Profile</CardTitle>
           </div>
           <CardDescription>
             Your unique voice fingerprint that powers content generation
@@ -217,7 +217,7 @@ export function VoiceDNACard({
             <Mic className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <p className="text-muted-foreground mb-2">No voice profile yet</p>
             <p className="text-sm text-muted-foreground">
-              Start recording to build your Voice DNA
+              Start recording to build your Ouno Core
             </p>
           </div>
         </CardContent>
@@ -231,7 +231,7 @@ export function VoiceDNACard({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Mic className="h-5 w-5 text-primary" />
-            <CardTitle>Voice DNA Profile</CardTitle>
+            <CardTitle>Ouno Core Profile</CardTitle>
           </div>
           <Badge
             variant={

@@ -63,22 +63,22 @@ function QuickAction({
 export function QuickActions() {
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Quick Actions</h2>
+      <h2 className="text-lg font-semibold">Start a Spark</h2>
       <div className="grid grid-cols-2 gap-4">
-        {/* Quick Capture - Primary Action */}
+        {/* Thought Stream - Primary Action */}
         <QuickAction
           href="/record/quick"
           icon={<Mic className="h-7 w-7" />}
-          title="Quick Capture"
+          title="Thought Stream"
           description="< 2 min"
           variant="primary"
         />
 
-        {/* Guided Session */}
+        {/* Deep Dive */}
         <QuickAction
           href="/record/guided"
           icon={<Timer className="h-7 w-7 text-primary" />}
-          title="Guided Session"
+          title="Deep Dive"
           description="2-5 min"
         />
       </div>

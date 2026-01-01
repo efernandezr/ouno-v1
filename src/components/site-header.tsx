@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Mic } from "lucide-react";
 import { UserProfile } from "@/components/auth/user-profile";
+import { OunoLogo } from "@/components/brand/OunoLogo";
 import { useSession } from "@/lib/auth-client";
 import { ModeToggle } from "./ui/mode-toggle";
 
@@ -21,7 +21,7 @@ export function SiteHeader() {
       >
         Skip to main content
       </a>
-      <header className="border-b" role="banner">
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60" role="banner">
         <nav
           className="container mx-auto px-4 py-4 flex justify-between items-center"
           aria-label="Main navigation"
@@ -29,18 +29,10 @@ export function SiteHeader() {
           <h1 className="text-2xl font-bold">
             <Link
               href={logoHref}
-              className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors"
-              aria-label={session?.user ? "VoiceDNA - Go to dashboard" : "VoiceDNA - Go to homepage"}
+              className="hover:opacity-80 transition-opacity"
+              aria-label={session?.user ? "Ouno - Go to dashboard" : "Ouno - Go to homepage"}
             >
-              <div
-                className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10"
-                aria-hidden="true"
-              >
-                <Mic className="h-5 w-5" />
-              </div>
-              <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                VoiceDNA
-              </span>
+              <OunoLogo size="md" />
             </Link>
           </h1>
           <div className="flex items-center gap-4" role="group" aria-label="User actions">

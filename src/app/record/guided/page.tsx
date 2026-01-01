@@ -52,12 +52,12 @@ const FOLLOW_UP_PROMPTS = [
 ];
 
 /**
- * Guided Session Page
+ * Deep Dive Page
  *
  * 5-minute structured recording with AI-guided prompts.
  * Multiple rounds of recording to develop ideas fully.
  */
-export default function GuidedSessionPage() {
+export default function DeepDivePage() {
   const router = useRouter();
   const [stage, setStage] = useState<GuidedStage>("intro");
   const [error, setError] = useState<string | null>(null);
@@ -232,7 +232,7 @@ export default function GuidedSessionPage() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">Guided Session</h1>
+              <h1 className="text-2xl font-bold">Deep Dive</h1>
               <p className="text-muted-foreground">
                 5 minutes to explore your idea in depth
               </p>
@@ -251,7 +251,7 @@ export default function GuidedSessionPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-muted-foreground">
-                I'll guide you through a conversation about your idea. We'll do
+                The Editor will guide you through a conversation about your idea. We&apos;ll do
                 up to 3 rounds of recording, with prompts to help you explore
                 different angles.
               </p>
@@ -264,7 +264,7 @@ export default function GuidedSessionPage() {
                 You can stop at any point if you feel you've captured enough.
               </p>
               <Button onClick={startSession} className="w-full gap-2">
-                Begin Session
+                Begin Deep Dive
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </CardContent>
@@ -362,7 +362,7 @@ export default function GuidedSessionPage() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">Session Complete</h1>
+              <h1 className="text-2xl font-bold">Spark Complete</h1>
               <p className="text-muted-foreground">
                 {rounds.length} round{rounds.length !== 1 ? "s" : ""} recorded
               </p>
@@ -387,7 +387,7 @@ export default function GuidedSessionPage() {
               onClick={handleStartOver}
               className="flex-1"
             >
-              Start New Session
+              Start New Spark
             </Button>
           </div>
         </div>

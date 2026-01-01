@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Mic, ArrowRight, Sparkles, Clock, User } from "lucide-react";
+import { ArrowRight, Sparkles, Clock, User, Mic } from "lucide-react";
+import { LogoMark } from "@/components/brand/OunoLogo";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
@@ -10,21 +11,19 @@ export default function Home() {
         <div className="max-w-4xl mx-auto text-center space-y-8">
           <div className="space-y-4">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10">
-                <Mic className="h-8 w-8 text-primary" />
-              </div>
+              <LogoMark size="lg" className="w-14 h-14 rounded-2xl" />
             </div>
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
               <span className="bg-gradient-to-r from-primary via-primary/90 to-primary/70 bg-clip-text text-transparent">
-                VoiceDNA
+                Ouno
               </span>
             </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
-              Stop typing prompts. Start talking ideas.
+            <p className="text-xl md:text-2xl font-medium text-foreground max-w-2xl mx-auto">
+              Your Authentic Intelligence
             </p>
             <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-              Capture your authentic thinking through speech and transform it into
-              polished content—preserving what makes <span className="font-semibold text-foreground">you</span> sound like <span className="font-semibold text-foreground">you</span>.
+              Speak your mind. We&apos;ll handle the words. Transform your voice into
+              polished content that sounds like <span className="font-semibold text-foreground">you</span>—not a generic AI.
             </p>
           </div>
 
@@ -62,7 +61,7 @@ export default function Home() {
               <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/10 mb-4">
                 <User className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Your Voice DNA</h3>
+              <h3 className="text-lg font-semibold mb-2">Your Ouno Core</h3>
               <p className="text-muted-foreground">
                 We learn your unique speaking patterns, vocabulary, and style to ensure the output sounds authentically you.
               </p>
@@ -101,7 +100,7 @@ export default function Home() {
               </div>
               <div>
                 <h3 className="font-semibold">Answer follow-up questions</h3>
-                <p className="text-muted-foreground">AI asks clarifying questions to draw out more depth and detail.</p>
+                <p className="text-muted-foreground">The Editor asks clarifying questions to draw out more depth and detail.</p>
               </div>
             </div>
             <div className="flex items-start gap-4 text-left">

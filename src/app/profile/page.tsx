@@ -64,7 +64,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="container max-w-4xl mx-auto py-8 px-4">
+    <div className="container max-w-4xl mx-auto py-8 px-4 pb-24 md:pb-8">
       <div className="flex items-center gap-4 mb-8">
         <Button
           variant="ghost"

@@ -1,13 +1,14 @@
 /**
  * Writing Samples API
  *
+ * GET - List user's writing samples
  * POST - Upload a writing sample for Voice DNA training
  * Supports: paste (direct text), url (fetch from web), file (uploaded content)
  */
 
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { extractWritingPatterns } from "@/lib/analysis/writingSampleAnalyzer";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -132,6 +133,57 @@ async function fetchUrlContent(url: string): Promise<string> {
       throw error;
     }
     throw new Error("Failed to fetch content from URL");
+  }
+}
+
+/**
+ * GET - List user's writing samples
+ */
+export async function GET() {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const samples = await db
+      .select({
+        id: writingSamples.id,
+        sourceType: writingSamples.sourceType,
+        sourceUrl: writingSamples.sourceUrl,
+        fileName: writingSamples.fileName,
+        content: writingSamples.content,
+        wordCount: writingSamples.wordCount,
+        analyzedAt: writingSamples.analyzedAt,
+        createdAt: writingSamples.createdAt,
+      })
+      .from(writingSamples)
+      .where(eq(writingSamples.userId, session.user.id))
+      .orderBy(desc(writingSamples.createdAt));
+
+    // Transform samples to include preview instead of full content
+    const samplesWithPreview = samples.map((sample) => ({
+      id: sample.id,
+      sourceType: sample.sourceType,
+      sourceUrl: sample.sourceUrl,
+      fileName: sample.fileName,
+      preview: sample.content.slice(0, 150) + (sample.content.length > 150 ? "..." : ""),
+      wordCount: sample.wordCount,
+      analyzedAt: sample.analyzedAt,
+      createdAt: sample.createdAt,
+    }));
+
+    return NextResponse.json({
+      samples: samplesWithPreview,
+      total: samples.length,
+    });
+  } catch (error) {
+    console.error("Error fetching samples:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch writing samples" },
+      { status: 500 }
+    );
   }
 }
 

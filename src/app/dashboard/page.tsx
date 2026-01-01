@@ -28,7 +28,7 @@ export default function DashboardPage() {
             <Lock className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
             <h1 className="text-2xl font-bold mb-2">Sign In Required</h1>
             <p className="text-muted-foreground mb-6">
-              Please sign in to access your VoiceDNA dashboard
+              Please sign in to access your Ouno dashboard
             </p>
           </div>
           <UserProfile />
@@ -51,14 +51,14 @@ export default function DashboardPage() {
         </header>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Quick Actions + Recent Content */}
           <div className="lg:col-span-2 space-y-8">
             <QuickActions />
             <RecentContent />
           </div>
 
-          {/* Right Column - Voice DNA Status */}
+          {/* Right Column - Ouno Core Status */}
           <div className="lg:col-span-1">
             <VoiceDNAStatus />
           </div>

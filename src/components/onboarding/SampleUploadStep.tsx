@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useSampleUpload, type UploadedSample } from "@/hooks/useSampleUpload";
 
 interface SampleUploadStepProps {
   onComplete: () => void;
@@ -26,209 +27,47 @@ interface SampleUploadStepProps {
   isProcessing: boolean;
 }
 
-type UploadMode = "select" | "paste" | "url" | "file";
-
-interface UploadedSample {
-  id: string;
-  sourceType: "paste" | "url" | "file";
-  preview: string;
-  wordCount: number;
-}
-
 /**
  * SampleUploadStep Component
  *
  * Optional step where users can upload writing samples to improve
- * the written patterns aspect of their Voice DNA.
+ * the written patterns aspect of their Ouno Core.
+ *
+ * Uses the shared useSampleUpload hook for upload logic.
  */
 export function SampleUploadStep({
   onComplete,
   onSkip,
   isProcessing,
 }: SampleUploadStepProps) {
-  const [mode, setMode] = useState<UploadMode>("select");
-  const [pasteContent, setPasteContent] = useState("");
-  const [urlInput, setUrlInput] = useState("");
+  // Track samples uploaded during this onboarding session
   const [samples, setSamples] = useState<UploadedSample[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handlePasteSubmit = useCallback(async () => {
-    if (!pasteContent.trim() || pasteContent.trim().length < 100) {
-      setError("Please enter at least 100 characters of content.");
-      return;
-    }
-
-    setIsUploading(true);
-    setError(null);
-
-    try {
-      const response = await fetch("/api/samples", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sourceType: "paste",
-          content: pasteContent.trim(),
-        }),
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "Failed to upload sample");
-      }
-
-      const result = await response.json();
-
-      setSamples([
-        ...samples,
-        {
-          id: result.sampleId,
-          sourceType: "paste",
-          preview: pasteContent.slice(0, 100) + "...",
-          wordCount: result.wordCount,
-        },
-      ]);
-
-      setPasteContent("");
-      setMode("select");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setIsUploading(false);
-    }
-  }, [pasteContent, samples]);
-
-  const handleUrlSubmit = useCallback(async () => {
-    if (!urlInput.trim()) {
-      setError("Please enter a URL.");
-      return;
-    }
-
-    // Basic URL validation
-    try {
-      new URL(urlInput.trim());
-    } catch {
-      setError("Please enter a valid URL.");
-      return;
-    }
-
-    setIsUploading(true);
-    setError(null);
-
-    try {
-      const response = await fetch("/api/samples", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sourceType: "url",
-          sourceUrl: urlInput.trim(),
-        }),
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "Failed to fetch article");
-      }
-
-      const result = await response.json();
-
-      setSamples([
-        ...samples,
-        {
-          id: result.sampleId,
-          sourceType: "url",
-          preview: urlInput.trim(),
-          wordCount: result.wordCount,
-        },
-      ]);
-
-      setUrlInput("");
-      setMode("select");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch article");
-    } finally {
-      setIsUploading(false);
-    }
-  }, [urlInput, samples]);
-
-  const handleFileUpload = useCallback(
-    async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
-
-      // Validate file type
-      const allowedTypes = [
-        "text/plain",
-        "text/markdown",
-        "application/markdown",
-      ];
-      if (
-        !allowedTypes.includes(file.type) &&
-        !file.name.endsWith(".md") &&
-        !file.name.endsWith(".txt")
-      ) {
-        setError("Please upload a .txt or .md file.");
-        return;
-      }
-
-      setIsUploading(true);
-      setError(null);
-
-      try {
-        const content = await file.text();
-
-        if (content.length < 100) {
-          throw new Error("File content is too short (minimum 100 characters)");
-        }
-
-        const response = await fetch("/api/samples", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sourceType: "file",
-            content,
-            fileName: file.name,
-          }),
-        });
-
-        if (!response.ok) {
-          const err = await response.json();
-          throw new Error(err.error || "Failed to upload file");
-        }
-
-        const result = await response.json();
-
-        setSamples([
-          ...samples,
-          {
-            id: result.sampleId,
-            sourceType: "file",
-            preview: file.name,
-            wordCount: result.wordCount,
-          },
-        ]);
-
-        setMode("select");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to read file");
-      } finally {
-        setIsUploading(false);
-        // Reset file input
-        event.target.value = "";
-      }
+  // Use the shared upload hook
+  const {
+    mode,
+    setMode,
+    pasteContent,
+    setPasteContent,
+    urlInput,
+    setUrlInput,
+    isUploading,
+    error,
+    handlePasteSubmit,
+    handleUrlSubmit,
+    handleFileChange,
+    clearError,
+  } = useSampleUpload({
+    onSuccess: (sample) => {
+      setSamples((prev) => [...prev, sample]);
     },
-    [samples]
-  );
+  });
 
-  const removeSample = useCallback(
-    (id: string) => {
-      setSamples(samples.filter((s) => s.id !== id));
-    },
-    [samples]
-  );
+  const removeSample = useCallback((id: string) => {
+    setSamples((prev) => prev.filter((s) => s.id !== id));
+  }, []);
 
-  const handleComplete = useCallback(async () => {
-    // Update onboarding status via the parent onComplete
+  const handleComplete = useCallback(() => {
     onComplete();
   }, [onComplete]);
 
@@ -242,7 +81,7 @@ export function SampleUploadStep({
           </div>
           <CardTitle className="text-2xl">Add Writing Samples</CardTitle>
           <CardDescription className="text-base">
-            Share examples of your existing writing to enhance your Voice DNA
+            Share examples of your existing writing to enhance your Ouno Core
             profile. This step is optional.
           </CardDescription>
         </CardHeader>
@@ -287,7 +126,10 @@ export function SampleUploadStep({
               <Button
                 variant="outline"
                 className="flex flex-col h-auto py-4 gap-2"
-                onClick={() => setMode("paste")}
+                onClick={() => {
+                  clearError();
+                  setMode("paste");
+                }}
               >
                 <ClipboardPaste className="h-6 w-6 text-primary" />
                 <span className="text-xs">Paste Text</span>
@@ -296,7 +138,10 @@ export function SampleUploadStep({
               <Button
                 variant="outline"
                 className="flex flex-col h-auto py-4 gap-2"
-                onClick={() => setMode("url")}
+                onClick={() => {
+                  clearError();
+                  setMode("url");
+                }}
               >
                 <LinkIcon className="h-6 w-6 text-primary" />
                 <span className="text-xs">From URL</span>
@@ -314,7 +159,8 @@ export function SampleUploadStep({
                     type="file"
                     accept=".txt,.md,text/plain,text/markdown"
                     className="absolute inset-0 opacity-0 cursor-pointer"
-                    onChange={handleFileUpload}
+                    onChange={handleFileChange}
+                    disabled={isUploading}
                   />
                 </label>
               </Button>
@@ -324,6 +170,14 @@ export function SampleUploadStep({
           {/* Error message */}
           {error && (
             <p className="text-sm text-destructive text-center">{error}</p>
+          )}
+
+          {/* Loading state for file upload */}
+          {isUploading && mode === "select" && (
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Analyzing file...
+            </div>
           )}
 
           {/* Actions */}
@@ -373,7 +227,7 @@ export function SampleUploadStep({
             <span>
               {pasteContent.split(/\s+/).filter(Boolean).length} words
             </span>
-            {pasteContent.length < 100 && (
+            {pasteContent.length < 100 && pasteContent.length > 0 && (
               <span className="text-destructive">
                 {100 - pasteContent.length} more characters needed
               </span>
@@ -387,7 +241,7 @@ export function SampleUploadStep({
               variant="outline"
               onClick={() => {
                 setMode("select");
-                setError(null);
+                clearError();
               }}
               disabled={isUploading}
             >
@@ -439,7 +293,7 @@ export function SampleUploadStep({
               variant="outline"
               onClick={() => {
                 setMode("select");
-                setError(null);
+                clearError();
               }}
               disabled={isUploading}
             >

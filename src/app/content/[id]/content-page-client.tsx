@@ -112,7 +112,7 @@ export function ContentPageClient({
   );
 
   return (
-    <div className="container max-w-4xl py-8 px-4">
+    <div className="container max-w-4xl py-8 px-4 pb-24 md:pb-8">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-4 mb-4">

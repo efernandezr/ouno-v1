@@ -9,7 +9,7 @@ import { auth } from "@/lib/auth";
 /**
  * Recording Mode Selection Page
  *
- * Users choose between Quick (2 min) and Guided (5 min) recording modes.
+ * Users choose between Thought Stream (2 min) and Deep Dive (5 min) recording modes.
  */
 export default async function RecordPage() {
   const session = await auth.api.getSession({
@@ -21,7 +21,7 @@ export default async function RecordPage() {
   }
 
   return (
-    <main className="flex-1 container mx-auto px-4 py-8">
+    <main className="flex-1 container mx-auto px-4 py-8 pb-24 md:pb-8">
       <div className="max-w-3xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-4">
@@ -41,20 +41,20 @@ export default async function RecordPage() {
 
         {/* Mode Selection Cards */}
         <div className="grid md:grid-cols-2 gap-6">
-          {/* Quick Mode */}
+          {/* Thought Stream Mode */}
           <Card className="relative overflow-hidden hover:shadow-lg transition-shadow">
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2" />
             <CardHeader>
               <div className="flex items-center gap-3 mb-2">
-                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-amber-500/10">
-                  <Zap className="h-5 w-5 text-amber-500" />
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent/10">
+                  <Zap className="h-5 w-5 text-accent" />
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Clock className="h-4 w-4" />
                   <span>Up to 2 minutes</span>
                 </div>
               </div>
-              <CardTitle>Quick Capture</CardTitle>
+              <CardTitle>Thought Stream</CardTitle>
               <CardDescription>
                 Perfect for capturing a single idea, insight, or thought
                 before it escapes. No prompts, just pure spontaneous expression.
@@ -63,64 +63,64 @@ export default async function RecordPage() {
             <CardContent className="space-y-4">
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-accent" />
                   Immediate recording start
                 </li>
                 <li className="flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-accent" />
                   No preparation needed
                 </li>
                 <li className="flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-accent" />
                   Best for single ideas
                 </li>
               </ul>
               <Button asChild className="w-full gap-2">
                 <Link href="/record/quick">
-                  Start Quick Capture
+                  Start Thought Stream
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
             </CardContent>
           </Card>
 
-          {/* Guided Mode */}
+          {/* Deep Dive Mode */}
           <Card className="relative overflow-hidden hover:shadow-lg transition-shadow">
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2" />
             <CardHeader>
               <div className="flex items-center gap-3 mb-2">
-                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-500/10">
-                  <MessageSquare className="h-5 w-5 text-blue-500" />
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-info/10">
+                  <MessageSquare className="h-5 w-5 text-info" />
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Clock className="h-4 w-4" />
                   <span>Up to 5 minutes</span>
                 </div>
               </div>
-              <CardTitle>Guided Session</CardTitle>
+              <CardTitle>Deep Dive</CardTitle>
               <CardDescription>
-                AI prompts help you explore your idea in depth. Great for
+                The Editor guides you through exploring your idea in depth. Great for
                 developing blog posts, articles, or deeper explorations.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-info" />
                   AI-powered follow-up questions
                 </li>
                 <li className="flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-info" />
                   Structured exploration
                 </li>
                 <li className="flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                  <div className="h-1.5 w-1.5 rounded-full bg-info" />
                   Best for complete articles
                 </li>
               </ul>
               <Button asChild variant="outline" className="w-full gap-2">
                 <Link href="/record/guided">
-                  Start Guided Session
+                  Start Deep Dive
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>

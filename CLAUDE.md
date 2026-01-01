@@ -1,14 +1,37 @@
-# VoiceDNA - AI Assistant Guidelines
+# Ouno - AI Assistant Guidelines
 
 ## Project Overview
 
-VoiceDNA is a voice-to-content platform that transforms spoken ideas into polished written content while preserving the user's authentic voice and style. Users record their thoughts, answer follow-up questions, and receive blog posts that sound like them—not generic AI output.
+Ouno is a voice-to-content platform that transforms spoken ideas into polished written content while preserving the user's authentic voice and style. Users record their thoughts, answer follow-up questions, and receive blog posts that sound like them—not generic AI output.
 
 ### Core Concept
 
-**"Stop typing prompts. Start talking ideas."**
+**"Your Authentic Intelligence"**
 
-The app learns each user's unique "Voice DNA"—their speaking patterns, vocabulary, tone, and style preferences—to generate content that authentically represents how they communicate.
+- **Tagline**: "Speak Your Mind. We'll Handle the Words."
+- **Value Prop**: "Turn Talk into Content"
+
+The app learns each user's unique "Ouno Core"—their speaking patterns, vocabulary, tone, and style preferences—to generate content that authentically represents how they communicate.
+
+### Brand Identity
+
+| Element | Value |
+|---------|-------|
+| Primary Color | Electric Indigo `#4F46E5` / `oklch(0.448 0.235 264.376)` |
+| Foreground | Deep Charcoal `#1F2937` / `oklch(0.227 0.019 264.376)` |
+| Accent/Warning | Signal Amber `#F59E0B` / `oklch(0.769 0.188 70.08)` |
+| Typography | Inter (body), JetBrains Mono (code) |
+| Logo | Microphone icon + "Ouno" text (via `OunoLogo` component) |
+
+### Terminology
+
+| Internal/API | User-Facing |
+|--------------|-------------|
+| `voice_dna_profiles` | Ouno Core |
+| `quick` mode | Thought Stream |
+| `guided` mode | Deep Dive |
+| `voice_sessions` | Sparks |
+| "The AI" | The Editor |
 
 ### Tech Stack
 
@@ -18,6 +41,7 @@ The app learns each user's unique "Voice DNA"—their speaking patterns, vocabul
 - **Database**: PostgreSQL with Drizzle ORM
 - **UI**: shadcn/ui components with Tailwind CSS 4
 - **Styling**: Tailwind CSS with dark mode support (next-themes)
+- **Typography**: Inter font family via `next/font/google`
 
 ## Key Features
 
@@ -25,9 +49,9 @@ The app learns each user's unique "Voice DNA"—their speaking patterns, vocabul
 - Record voice memos (2-5 minutes)
 - Real-time audio visualization
 - Automatic transcription with word timestamps
-- Quick mode (fast capture) vs Guided mode (structured prompts)
+- **Thought Stream** mode (fast capture) vs **Deep Dive** mode (structured prompts)
 
-### 2. Voice DNA Profiling
+### 2. Ouno Core Profiling
 - **Spoken Patterns**: Sentence structure, fillers, speech rhythm
 - **Written Patterns**: Preferred vocabulary, formatting style
 - **Tonal Attributes**: Formality level, enthusiasm, humor
@@ -35,9 +59,9 @@ The app learns each user's unique "Voice DNA"—their speaking patterns, vocabul
 
 ### 3. Content Generation Pipeline
 1. User records voice → transcribed
-2. AI analyzes for enthusiasm and key topics
+2. The Editor analyzes for enthusiasm and key topics
 3. Follow-up questions draw out more depth
-4. Content generated using Voice DNA profile
+4. Content generated using Ouno Core profile
 5. User can refine/iterate on output
 
 ### 4. Onboarding Flow
@@ -48,7 +72,7 @@ The app learns each user's unique "Voice DNA"—their speaking patterns, vocabul
 
 ### 5. Calibration System
 - Users rate generated samples (1-5)
-- Feedback improves Voice DNA accuracy
+- Feedback improves Ouno Core accuracy
 - Learned rules stored for future generations
 
 ## Project Structure
@@ -60,12 +84,12 @@ src/
 │   ├── api/
 │   │   ├── auth/[...all]/       # BetterAuth catch-all
 │   │   ├── voice/               # Voice upload, transcribe, analyze
-│   │   ├── voice-dna/           # Voice DNA profile CRUD
-│   │   ├── session/             # Voice session management
-│   │   │   ├── create/          # Create new session
-│   │   │   └── [id]/            # Session details, questions, responses
+│   │   ├── voice-dna/           # Ouno Core profile CRUD
+│   │   ├── session/             # Spark session management
+│   │   │   ├── create/          # Create new Spark
+│   │   │   └── [id]/            # Spark details, questions, responses
 │   │   ├── content/             # Content generation
-│   │   │   ├── generate/        # Generate content from session
+│   │   │   ├── generate/        # Generate content from Spark
 │   │   │   └── [id]/            # Content CRUD, refinement
 │   │   ├── onboarding/          # Onboarding flow endpoints
 │   │   ├── calibration/         # Calibration rounds
@@ -73,25 +97,27 @@ src/
 │   │   └── samples/             # Writing samples
 │   ├── dashboard/               # User dashboard
 │   ├── record/                  # Voice recording pages
-│   │   ├── quick/               # Quick recording mode
-│   │   └── guided/              # Guided recording mode
-│   ├── session/[id]/            # Session detail view
+│   │   ├── quick/               # Thought Stream mode
+│   │   └── guided/              # Deep Dive mode
+│   ├── session/[id]/            # Spark detail view
 │   ├── content/                 # Content viewing/editing
 │   ├── onboarding/              # Onboarding wizard
 │   ├── settings/                # User settings
 │   └── profile/                 # User profile
 ├── components/
 │   ├── auth/                    # Authentication components
+│   ├── brand/                   # Brand components
+│   │   └── OunoLogo.tsx         # Reusable logo (LogoMark + LogoText)
 │   ├── voice/                   # Voice recording components
 │   │   ├── VoiceRecorder.tsx    # Main recorder component
 │   │   ├── AudioVisualizer.tsx  # Real-time audio visualization
 │   │   ├── RecordingControls.tsx
 │   │   └── TranscriptPreview.tsx
-│   ├── voice-dna/               # Voice DNA components
+│   ├── voice-dna/               # Ouno Core components
 │   │   ├── VoiceDNACard.tsx     # Profile display
 │   │   ├── CalibrationFlow.tsx  # Calibration wizard
 │   │   └── StrengthIndicator.tsx
-│   ├── session/                 # Session-related components
+│   ├── session/                 # Spark-related components
 │   ├── content/                 # Content display/editing
 │   ├── onboarding/              # Onboarding components
 │   └── ui/                      # shadcn/ui components
@@ -104,8 +130,8 @@ src/
 │   └── utils.ts                 # Utility functions
 └── types/
     ├── voice.ts                 # Voice recording types
-    ├── voiceDNA.ts              # Voice DNA profile types
-    ├── session.ts               # Session types
+    ├── voiceDNA.ts              # Ouno Core profile types
+    ├── session.ts               # Spark types
     ├── content.ts               # Content types
     ├── calibration.ts           # Calibration types
     └── referent.ts              # Referent creator types
@@ -118,9 +144,9 @@ src/
 | Table | Purpose |
 |-------|---------|
 | `user` | User accounts with onboarding status |
-| `voice_dna_profiles` | Voice DNA data per user |
-| `voice_sessions` | Recording sessions with transcripts |
-| `generated_content` | Blog posts/articles from sessions |
+| `voice_dna_profiles` | Ouno Core data per user |
+| `voice_sessions` | Spark recordings with transcripts |
+| `generated_content` | Blog posts/articles from Sparks |
 | `writing_samples` | User-provided writing samples |
 | `referent_creators` | Style influence profiles |
 | `calibration_rounds` | Calibration feedback data |
@@ -128,7 +154,7 @@ src/
 ### Key Enums
 
 - `onboarding_status`: not_started, voice_intro, follow_ups, samples, complete
-- `session_mode`: quick, guided
+- `session_mode`: quick (Thought Stream), guided (Deep Dive)
 - `session_status`: recording, transcribing, analyzing, follow_ups, generating, complete, error
 - `content_status`: draft, final, published
 
@@ -136,7 +162,7 @@ src/
 
 ```env
 # Database
-POSTGRES_URL=postgresql://user:password@localhost:5432/voicedna
+POSTGRES_URL=postgresql://user:password@localhost:5432/ouno
 
 # BetterAuth
 BETTER_AUTH_SECRET=32-char-random-string
@@ -182,30 +208,34 @@ pnpm db:studio    # Open Drizzle Studio
 
 4. **Understand the data flow**:
    - Voice → Transcript → Analysis → Follow-ups → Content
-   - Voice DNA profile influences all generated content
+   - Ouno Core profile influences all generated content
 
-5. **Session states matter**:
-   - Sessions progress through defined statuses
+5. **Spark states matter**:
+   - Sparks progress through defined statuses
    - Don't skip states or make invalid transitions
 
-6. **Voice DNA is central**:
-   - All content generation should use the user's Voice DNA
+6. **Ouno Core is central**:
+   - All content generation should use the user's Ouno Core
    - Calibration improves accuracy over time
+
+7. **Use correct terminology**:
+   - User-facing: "Ouno Core", "Thought Stream", "Deep Dive", "Spark", "The Editor"
+   - Internal/API: `voice_dna_profiles`, `quick`, `guided`, `voice_sessions`
 
 ### Common Tasks
 
-**Adding a new session feature:**
+**Adding a new Spark feature:**
 1. Update types in `src/types/session.ts`
 2. Modify schema if needed (`src/lib/schema.ts`)
 3. Add/update API route in `src/app/api/session/`
-4. Update session components in `src/components/session/`
+4. Update Spark components in `src/components/session/`
 
 **Modifying content generation:**
 1. Check `src/app/api/content/generate/route.ts`
-2. Understand Voice DNA usage in prompts
+2. Understand Ouno Core usage in prompts
 3. Reference `src/types/voiceDNA.ts` for profile structure
 
-**Working with Voice DNA:**
+**Working with Ouno Core:**
 1. Profile stored in `voice_dna_profiles` table
 2. Components in `src/components/voice-dna/`
 3. API at `src/app/api/voice-dna/`
@@ -215,12 +245,27 @@ pnpm db:studio    # Open Drizzle Studio
 2. API routes in `src/app/api/onboarding/`
 3. Components in `src/components/onboarding/`
 
+**Using the logo:**
+```tsx
+import { OunoLogo, LogoMark, LogoText } from "@/components/brand/OunoLogo";
+
+// Full logo with text
+<OunoLogo size="md" />
+
+// Icon only (for compact spaces)
+<OunoLogo size="sm" showText={false} />
+
+// Individual components
+<LogoMark size="lg" />
+<LogoText size="lg" />
+```
+
 ### Type Definitions
 
 Key types to understand:
 
 ```typescript
-// Voice DNA Profile structure
+// Ouno Core Profile structure
 interface VoiceDNA {
   spokenPatterns: SpokenPatterns;
   writtenPatterns: WrittenPatterns;
@@ -229,10 +274,10 @@ interface VoiceDNA {
   learnedRules: LearnedRule[];
 }
 
-// Session with full context
+// Spark with full context
 interface VoiceSession {
   id: string;
-  mode: 'quick' | 'guided';
+  mode: 'quick' | 'guided'; // Thought Stream | Deep Dive
   status: SessionStatus;
   transcript: string;
   enthusiasmAnalysis: EnthusiasmAnalysis;
@@ -244,10 +289,11 @@ interface VoiceSession {
 ### Best Practices
 
 - Read existing patterns before creating new features
-- Voice DNA should feel personal, not generic
+- Ouno Core should feel personal, not generic
 - Follow-up questions should draw out unique insights
 - Content should preserve the user's authentic voice
 - Calibration feedback is valuable—use it to improve
+- Refer to "The Editor" (not "the AI") in user-facing copy
 
 ## Package Manager
 

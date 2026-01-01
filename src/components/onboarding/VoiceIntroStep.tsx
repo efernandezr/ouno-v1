@@ -33,7 +33,7 @@ type StepState =
  * VoiceIntroStep Component
  *
  * First step of onboarding where users introduce themselves via voice.
- * This recording creates their initial Voice DNA profile.
+ * This recording creates their initial Ouno Core profile.
  */
 export function VoiceIntroStep({
   userName,
@@ -144,7 +144,7 @@ export function VoiceIntroStep({
       { key: "transcribing", label: "Transcribing your voice..." },
       { key: "analyzing", label: "Analyzing your speaking patterns..." },
       { key: "generating", label: "Preparing follow-up questions..." },
-      { key: "complete", label: "Voice DNA profile created!" },
+      { key: "complete", label: "Ouno Core profile created!" },
     ];
 
     return (

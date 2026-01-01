@@ -1,4 +1,4 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { BottomNav } from "@/components/bottom-nav";
 import { SiteFooter } from "@/components/site-footer";
@@ -7,13 +7,13 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import type { Metadata } from "next";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
 });
 
@@ -26,33 +26,33 @@ export const viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "VoiceDNA",
-    template: "%s | VoiceDNA",
+    default: "Ouno",
+    template: "%s | Ouno",
   },
   description:
-    "Voice-first AI content creation. Capture your authentic thinking through speech and transform it into polished content that sounds like you.",
+    "Your Authentic Intelligence. Turn talk into content. Speak your mind and transform it into polished articles that sound like you.",
   keywords: [
-    "VoiceDNA",
-    "Voice to text",
+    "Ouno",
+    "Ouno Core",
+    "Voice to content",
     "AI writing",
-    "Content creation",
-    "Speech to blog",
-    "Voice capture",
     "Authentic content",
+    "Voice capture",
+    "Content creation",
   ],
   openGraph: {
     type: "website",
     locale: "en_US",
-    siteName: "VoiceDNA",
-    title: "VoiceDNA - Voice-First AI Content Creation",
+    siteName: "Ouno",
+    title: "Ouno - Your Authentic Intelligence",
     description:
-      "Capture your authentic thinking through speech and transform it into polished content.",
+      "Speak your mind. We'll handle the words. Transform your voice into polished content.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "VoiceDNA - Voice-First AI Content Creation",
+    title: "Ouno - Your Authentic Intelligence",
     description:
-      "Capture your authentic thinking through speech and transform it into polished content.",
+      "Speak your mind. We'll handle the words. Transform your voice into polished content.",
   },
   robots: {
     index: true,
@@ -68,7 +68,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}
       >
         <ThemeProvider
           attribute="class"
