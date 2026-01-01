@@ -1,9 +1,37 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { ArrowRight, Sparkles, Clock, User, Mic } from "lucide-react";
 import { OunoLogo } from "@/components/brand/OunoLogo";
 import { Button } from "@/components/ui/button";
+import { useSession } from "@/lib/auth-client";
 
 export default function Home() {
+  const { data: session, isPending } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isPending && session) {
+      router.push("/dashboard");
+    }
+  }, [session, isPending, router]);
+
+  // Show loading state while checking authentication
+  if (isPending) {
+    return (
+      <div className="flex justify-center items-center min-h-[60vh]">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  // If logged in, don't render landing page (redirect will happen)
+  if (session) {
+    return null;
+  }
+
   return (
     <main className="flex-1">
       {/* Hero Section */}
