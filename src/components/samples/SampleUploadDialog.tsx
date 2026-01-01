@@ -162,7 +162,7 @@ export function SampleUploadDialog({
               placeholder="Paste your writing sample here..."
               value={pasteContent}
               onChange={(e) => setPasteContent(e.target.value)}
-              className="min-h-[180px]"
+              className="min-h-[180px] max-h-[50vh] resize-none overflow-y-auto [field-sizing:fixed]"
               autoFocus
             />
 

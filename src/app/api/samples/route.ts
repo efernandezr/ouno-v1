@@ -9,10 +9,11 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { eq, desc } from "drizzle-orm";
+import { rebuildVoiceDNA } from "@/lib/analysis/voiceDNABuilder";
 import { extractWritingPatterns } from "@/lib/analysis/writingSampleAnalyzer";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { writingSamples, voiceDNAProfiles } from "@/lib/schema";
+import { writingSamples } from "@/lib/schema";
 import { isValidExternalUrl, VALIDATION_LIMITS } from "@/lib/validation";
 
 interface SampleRequest {
@@ -263,8 +264,7 @@ export async function POST(request: Request) {
       throw new Error("Failed to save writing sample");
     }
 
-    // Analyze the sample in the background
-    // For now, we'll do it synchronously since it's quick
+    // Analyze the sample and rebuild Voice DNA profile
     try {
       const patterns = await extractWritingPatterns(sampleContent);
 
@@ -276,22 +276,9 @@ export async function POST(request: Request) {
         })
         .where(eq(writingSamples.id, sample.id));
 
-      // Update Voice DNA profile stats
-      const [profile] = await db
-        .select()
-        .from(voiceDNAProfiles)
-        .where(eq(voiceDNAProfiles.userId, session.user.id))
-        .limit(1);
-
-      if (profile) {
-        await db
-          .update(voiceDNAProfiles)
-          .set({
-            writingSamplesAnalyzed: (profile.writingSamplesAnalyzed || 0) + 1,
-            updatedAt: new Date(),
-          })
-          .where(eq(voiceDNAProfiles.userId, session.user.id));
-      }
+      // Rebuild Voice DNA profile to incorporate new sample
+      // This merges all writing samples and recalculates the calibration score
+      await rebuildVoiceDNA(session.user.id);
     } catch (analysisError) {
       console.error("Error analyzing sample:", analysisError);
       // Don't fail the request, sample is still saved

@@ -7,9 +7,10 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
+import { rebuildVoiceDNA } from "@/lib/analysis/voiceDNABuilder";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { writingSamples, voiceDNAProfiles } from "@/lib/schema";
+import { writingSamples } from "@/lib/schema";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -53,23 +54,9 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
       );
     }
 
-    // Decrement the counter on Voice DNA profile
-    const [profile] = await db
-      .select()
-      .from(voiceDNAProfiles)
-      .where(eq(voiceDNAProfiles.userId, session.user.id))
-      .limit(1);
-
-    const currentCount = profile?.writingSamplesAnalyzed ?? 0;
-    if (profile && currentCount > 0) {
-      await db
-        .update(voiceDNAProfiles)
-        .set({
-          writingSamplesAnalyzed: currentCount - 1,
-          updatedAt: new Date(),
-        })
-        .where(eq(voiceDNAProfiles.userId, session.user.id));
-    }
+    // Rebuild Voice DNA profile to reflect the removal
+    // This recalculates the profile from remaining samples
+    await rebuildVoiceDNA(session.user.id);
 
     return NextResponse.json({ success: true });
   } catch (error) {

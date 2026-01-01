@@ -9,15 +9,16 @@
 
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { voiceDNAProfiles } from "@/lib/schema";
+import { voiceDNAProfiles, writingSamples } from "@/lib/schema";
 import type { EnthusiasmAnalysis } from "@/types/session";
 import type { WordTimestamp } from "@/types/voice";
-import type { VoiceDNA, SpokenPatterns, TonalAttributes } from "@/types/voiceDNA";
+import type { VoiceDNA, SpokenPatterns, TonalAttributes, WrittenPatterns, ExtractedWritingPatterns } from "@/types/voiceDNA";
 import {
   detectEnthusiasm,
   extractEnthusiasticTopics,
 } from "./enthusiasmDetector";
 import { analyzeLinguistics } from "./linguisticAnalyzer";
+import { mergeWritingPatterns } from "./writingSampleAnalyzer";
 
 interface BuildVoiceDNAInput {
   userId: string;
@@ -527,5 +528,157 @@ export function getVoiceDNASummary(voiceDNA: VoiceDNA): {
     strengths: strengths.slice(0, 5),
     characteristics: characteristics.slice(0, 5),
     calibrationLevel,
+  };
+}
+
+/**
+ * Convert ExtractedWritingPatterns to WrittenPatterns
+ * Maps the raw extraction format to the profile format
+ */
+function convertToWrittenPatterns(
+  extracted: ExtractedWritingPatterns
+): WrittenPatterns {
+  // Determine structure preference based on key phrases
+  let structurePreference: WrittenPatterns["structurePreference"] = "linear";
+  if (extracted.keyPhrases.some(p => p.includes("story") || p.includes("narrative"))) {
+    structurePreference = "narrative";
+  } else if (extracted.keyPhrases.some(p => p.includes("numbered") || p.includes("structure"))) {
+    structurePreference = "modular";
+  }
+
+  // Determine formality from tone indicators and vocabulary complexity
+  let formality = 0.5;
+  if (extracted.toneIndicators.includes("formal")) formality += 0.2;
+  if (extracted.toneIndicators.includes("authoritative")) formality += 0.1;
+  if (extracted.toneIndicators.includes("conversational")) formality -= 0.2;
+  if (extracted.toneIndicators.includes("humorous")) formality -= 0.1;
+  formality = Math.max(0, Math.min(1, formality + (extracted.vocabularyComplexity - 0.5) * 0.3));
+
+  // Determine opening style from key phrases
+  let openingStyle: WrittenPatterns["openingStyle"] = "context";
+  if (extracted.keyPhrases.some(p => p.includes("question opening"))) {
+    openingStyle = "question";
+  } else if (extracted.keyPhrases.some(p => p.includes("story opening"))) {
+    openingStyle = "story";
+  } else if (extracted.keyPhrases.some(p => p.includes("direct opening"))) {
+    openingStyle = "hook";
+  }
+
+  // Determine closing style from key phrases
+  let closingStyle: WrittenPatterns["closingStyle"] = "summary";
+  if (extracted.keyPhrases.some(p => p.includes("question closing"))) {
+    closingStyle = "question";
+  } else if (extracted.keyPhrases.some(p => p.includes("action closing"))) {
+    closingStyle = "cta";
+  } else if (extracted.toneIndicators.includes("empathetic")) {
+    closingStyle = "reflection";
+  }
+
+  return {
+    structurePreference,
+    formality,
+    paragraphLength: extracted.paragraphStructure,
+    openingStyle,
+    closingStyle,
+  };
+}
+
+/**
+ * Rebuild Voice DNA profile from all available data
+ *
+ * This function:
+ * 1. Fetches all writing samples for the user
+ * 2. Merges their extractedPatterns into unified writtenPatterns
+ * 3. Recalculates the calibration score
+ * 4. Updates the Voice DNA profile
+ *
+ * Call this after adding/removing writing samples to keep the profile in sync.
+ */
+export async function rebuildVoiceDNA(userId: string): Promise<{
+  profile: VoiceDNA | null;
+  voiceSessionsAnalyzed: number;
+  writingSamplesAnalyzed: number;
+  calibrationRoundsCompleted: number;
+  calibrationScore: number;
+}> {
+  // Step 1: Get existing profile
+  const existingData = await getVoiceDNAProfile(userId);
+
+  // Step 2: Fetch all analyzed writing samples
+  const samples = await db
+    .select({
+      extractedPatterns: writingSamples.extractedPatterns,
+    })
+    .from(writingSamples)
+    .where(eq(writingSamples.userId, userId));
+
+  const analyzedSamples = samples.filter(
+    (s) => s.extractedPatterns !== null
+  ) as { extractedPatterns: ExtractedWritingPatterns }[];
+
+  const writingSamplesCount = analyzedSamples.length;
+
+  // Step 3: Merge writing patterns if we have samples
+  let writtenPatterns: WrittenPatterns | null = null;
+  if (analyzedSamples.length > 0) {
+    const mergedExtracted = mergeWritingPatterns(
+      analyzedSamples.map((s) => s.extractedPatterns)
+    );
+    writtenPatterns = convertToWrittenPatterns(mergedExtracted);
+  }
+
+  // Step 4: Calculate new calibration score
+  const newVoiceDNA: VoiceDNA = {
+    spokenPatterns: existingData.profile?.spokenPatterns || null,
+    writtenPatterns,
+    tonalAttributes: existingData.profile?.tonalAttributes || null,
+    referentInfluences: existingData.profile?.referentInfluences || null,
+    learnedRules: existingData.profile?.learnedRules || [],
+    calibrationScore: 0,
+  };
+
+  const newCalibrationScore = calculateCalibrationScore(
+    existingData.voiceSessionsAnalyzed,
+    writingSamplesCount,
+    existingData.calibrationRoundsCompleted,
+    newVoiceDNA
+  );
+
+  newVoiceDNA.calibrationScore = newCalibrationScore;
+
+  // Step 5: Update the database
+  if (!existingData.profile) {
+    // Create new profile if none exists
+    await db.insert(voiceDNAProfiles).values({
+      userId,
+      spokenPatterns: null,
+      writtenPatterns,
+      tonalAttributes: null,
+      referentInfluences: null,
+      learnedRules: [],
+      calibrationScore: newCalibrationScore,
+      calibrationRoundsCompleted: 0,
+      voiceSessionsAnalyzed: 0,
+      writingSamplesAnalyzed: writingSamplesCount,
+    });
+  } else {
+    // Update existing profile
+    await db
+      .update(voiceDNAProfiles)
+      .set({
+        writtenPatterns,
+        calibrationScore: newCalibrationScore,
+        writingSamplesAnalyzed: writingSamplesCount,
+        updatedAt: new Date(),
+      })
+      .where(eq(voiceDNAProfiles.userId, userId));
+  }
+
+  return {
+    profile: newVoiceDNA,
+    voiceSessionsAnalyzed: existingData.voiceSessionsAnalyzed,
+    writingSamplesAnalyzed: writingSamplesCount,
+    calibrationRoundsCompleted: existingData.calibrationRoundsCompleted,
+    calibrationScore: newCalibrationScore,
   };
 }

@@ -23,6 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CalibrationFlow } from "@/components/voice-dna/CalibrationFlow";
 import { StrengthIndicator } from "@/components/voice-dna/StrengthIndicator";
 import { VoiceDNACard } from "@/components/voice-dna/VoiceDNACard";
 import { useSession } from "@/lib/auth-client";
@@ -49,7 +50,9 @@ export default function VoiceDNASettingsPage() {
   const router = useRouter();
   const [data, setData] = useState<VoiceDNAResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [rebuilding, setRebuilding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showCalibration, setShowCalibration] = useState(false);
 
   const fetchVoiceDNA = useCallback(async () => {
     try {
@@ -65,6 +68,25 @@ export default function VoiceDNASettingsPage() {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const rebuildVoiceDNA = useCallback(async () => {
+    try {
+      setRebuilding(true);
+      setError(null);
+      const response = await fetch("/api/voice-dna/rebuild", {
+        method: "POST",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to rebuild Ouno Core profile");
+      }
+      const result = await response.json();
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setRebuilding(false);
     }
   }, []);
 
@@ -126,13 +148,13 @@ export default function VoiceDNASettingsPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={fetchVoiceDNA}
-              disabled={loading}
+              onClick={rebuildVoiceDNA}
+              disabled={loading || rebuilding}
             >
               <RefreshCw
-                className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+                className={`h-4 w-4 mr-2 ${rebuilding ? "animate-spin" : ""}`}
               />
-              Refresh
+              {rebuilding ? "Rebuilding..." : "Rebuild"}
             </Button>
           </div>
         </div>
@@ -227,6 +249,52 @@ export default function VoiceDNASettingsPage() {
                   </div>
                 )}
               </CardContent>
+            </Card>
+
+            {/* Calibration Rounds Section */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Mic className="h-5 w-5" />
+                      Calibration Rounds
+                    </CardTitle>
+                    <CardDescription>
+                      Fine-tune your Ouno Core by reviewing AI-generated samples
+                    </CardDescription>
+                  </div>
+                  {!showCalibration && (
+                    <Button onClick={() => setShowCalibration(true)}>
+                      {data.stats.calibrationRoundsCompleted > 0
+                        ? `Continue (${data.stats.calibrationRoundsCompleted}/3)`
+                        : "Start Calibration"}
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              {showCalibration && (
+                <CardContent>
+                  <CalibrationFlow
+                    initialRound={Math.min(data.stats.calibrationRoundsCompleted + 1, 3)}
+                    totalRounds={3}
+                    onComplete={() => {
+                      setShowCalibration(false);
+                      rebuildVoiceDNA();
+                    }}
+                  />
+                </CardContent>
+              )}
+              {!showCalibration && data.stats.calibrationRoundsCompleted > 0 && (
+                <CardContent>
+                  <div className="text-sm text-muted-foreground">
+                    You&apos;ve completed {data.stats.calibrationRoundsCompleted} of 3 calibration rounds.
+                    {data.stats.calibrationRoundsCompleted < 3 && (
+                      <span> Complete more rounds to improve accuracy.</span>
+                    )}
+                  </div>
+                </CardContent>
+              )}
             </Card>
 
             {/* Writing Samples Section */}
