@@ -97,6 +97,21 @@ Rules:
 function buildVoiceDNASection(voiceDNA: VoiceDNA): string {
   const parts: string[] = ["## VOICE DNA PROFILE"];
 
+  // Check if we have any Voice DNA data
+  const hasProfile = voiceDNA.spokenPatterns || voiceDNA.writtenPatterns || voiceDNA.tonalAttributes;
+
+  if (!hasProfile) {
+    // New user without Voice DNA - provide general guidance
+    parts.push(`### Note: This user hasn't built their Voice DNA profile yet.
+Since we don't have detailed patterns, focus on:
+1. DIRECTLY transforming their spoken words into written content
+2. Preserving their exact vocabulary and phrasing
+3. Using a natural, conversational tone
+4. Creating a well-structured article from their ideas
+5. Expanding on their key points with appropriate transitions`);
+    return parts.join("\n");
+  }
+
   // Spoken patterns
   if (voiceDNA.spokenPatterns) {
     const sp = voiceDNA.spokenPatterns;
@@ -299,22 +314,34 @@ function buildOutputRequirements(voiceDNA: VoiceDNA): string {
         ? "polished, professional"
         : "balanced, approachable";
 
+  const hasProfile = voiceDNA.spokenPatterns || voiceDNA.writtenPatterns || voiceDNA.tonalAttributes;
+
   return `## OUTPUT REQUIREMENTS
 
-1. Write in markdown format
-2. Start with a compelling title (# Heading)
-3. Use ## for major sections
+1. Write in markdown format with a clear structure
+2. Start with a compelling title (# Heading) that captures their main idea
+3. Use ## for major sections to organize the content
 4. Keep their authentic voice—tone should be ${formalityNote}
-5. Emphasize high-enthusiasm moments with **bold** or > blockquotes
+5. Emphasize key points with **bold** or > blockquotes
 6. Include their actual phrases—don't paraphrase unique expressions
-7. Target ${voiceDNA.writtenPatterns?.paragraphLength || "medium"} paragraphs
-8. End according to their preferred style
+7. Create well-structured paragraphs with smooth transitions
+8. End with a strong conclusion that reinforces their message
 
-IMPORTANT:
+${hasProfile ? "" : `### For Short Transcripts:
+Since this transcript is brief, expand thoughtfully:
+- Elaborate on each key point they mentioned
+- Add introductory context that sets up their ideas
+- Create logical sections that explore different aspects
+- Provide a conclusion that summarizes their perspective
+- NEVER repeat the same sentence or phrase multiple times`}
+
+CRITICAL RULES:
 - Do NOT add facts, statistics, or examples they didn't mention
 - Do NOT change their perspective or opinions
 - Do NOT make the content more formal than their natural speech
-- Do NOT add generic filler or transitions—use their words`;
+- Do NOT repeat sentences or create filler content
+- Do NOT just echo what they said—transform it into readable prose
+- Each paragraph should add new value, not repeat previous content`;
 }
 
 // Helper functions

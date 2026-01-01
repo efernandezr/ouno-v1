@@ -8,14 +8,25 @@
 
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { voiceSessions } from "@/lib/schema";
-import type { SessionMode } from "@/types/session";
+import type { SessionMode, SessionStatus } from "@/types/session";
+
+interface WordTimestamp {
+  word: string;
+  start: number;
+  end: number;
+  confidence: number;
+}
 
 interface CreateSessionRequest {
   mode: SessionMode;
   title?: string;
+  // Optional: Pass transcript data directly (for quick capture flow)
+  transcript?: string;
+  durationSeconds?: number;
+  wordTimestamps?: WordTimestamp[];
 }
 
 /**
@@ -39,7 +50,7 @@ export async function POST(request: Request) {
     }
 
     const body = (await request.json()) as CreateSessionRequest;
-    const { mode, title } = body;
+    const { mode, title: _title, transcript, durationSeconds, wordTimestamps } = body;
 
     // Validate mode
     if (!mode || !["quick", "guided"].includes(mode)) {
@@ -49,23 +60,65 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create the session
-    const [newSession] = await db
-      .insert(voiceSessions)
-      .values({
-        userId: session.user.id,
-        mode,
-        status: "recording",
-        title: title || null,
-        followUpQuestions: [],
-        followUpResponses: [],
-      })
-      .returning({
-        id: voiceSessions.id,
-        mode: voiceSessions.mode,
-        status: voiceSessions.status,
-        createdAt: voiceSessions.createdAt,
+    // Determine initial status based on whether transcript is provided
+    // If transcript is provided (quick capture), skip to generating status
+    const hasTranscript = !!transcript && transcript.trim().length > 0;
+    const initialStatus: SessionStatus = hasTranscript ? "generating" : "recording";
+
+    // Use raw SQL for better control over JSONB serialization
+    // This avoids issues with how postgres.js/Drizzle serialize complex objects
+    let newSession;
+    try {
+      const wordTimestampsJson = Array.isArray(wordTimestamps) && wordTimestamps.length > 0
+        ? JSON.stringify(wordTimestamps)
+        : null;
+
+      const result = await db.execute<{
+        id: string;
+        mode: string;
+        status: string;
+        created_at: Date;
+      }>(sql`
+        INSERT INTO voice_sessions (
+          user_id,
+          mode,
+          status,
+          transcript,
+          duration_seconds,
+          word_timestamps
+        ) VALUES (
+          ${session.user.id},
+          ${mode}::"session_mode",
+          ${initialStatus}::"session_status",
+          ${transcript ?? null},
+          ${typeof durationSeconds === "number" ? Math.round(durationSeconds) : null},
+          ${wordTimestampsJson}::jsonb
+        )
+        RETURNING id, mode, status, created_at
+      `);
+
+      // Extract the first row from the result (it's an array-like object)
+      const firstRow = result[0];
+
+      if (firstRow) {
+        newSession = {
+          id: firstRow.id,
+          mode: firstRow.mode as SessionMode,
+          status: firstRow.status as SessionStatus,
+          createdAt: firstRow.created_at,
+        };
+      }
+
+    } catch (dbError) {
+      console.error("Database insert error:", {
+        error: dbError,
+        message: dbError instanceof Error ? dbError.message : "Unknown",
+        code: (dbError as { code?: string })?.code,
+        // Include full error object for debugging
+        fullError: JSON.stringify(dbError, Object.getOwnPropertyNames(dbError as object)),
       });
+      throw dbError;
+    }
 
     return NextResponse.json({
       success: true,
@@ -75,11 +128,26 @@ export async function POST(request: Request) {
       createdAt: newSession?.createdAt,
     });
   } catch (error) {
-    console.error("Error creating session:", error);
+    // Log full error details for debugging
+    console.error("Error creating session:", {
+      error,
+      message: error instanceof Error ? error.message : "Unknown",
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+    });
+
+    // Check for specific database errors
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const isDbError = errorMessage.includes("relation") ||
+                      errorMessage.includes("column") ||
+                      errorMessage.includes("type") ||
+                      errorMessage.includes("constraint");
+
     return NextResponse.json(
       {
         error: "Failed to create session",
-        details: error instanceof Error ? error.message : "Unknown error",
+        details: errorMessage,
+        hint: isDbError ? "Database schema may need migration. Run: pnpm db:push" : undefined,
       },
       { status: 500 }
     );

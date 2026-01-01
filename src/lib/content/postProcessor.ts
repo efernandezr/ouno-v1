@@ -110,6 +110,7 @@ export function calculateReadTime(wordCount: number): number {
  * - Ensures proper markdown formatting
  * - Removes any instruction artifacts
  * - Normalizes whitespace
+ * - Detects and removes repetitive content
  */
 export function cleanupContent(content: string): string {
   let cleaned = content;
@@ -123,6 +124,9 @@ export function cleanupContent(content: string): string {
   // Normalize multiple consecutive blank lines to single blank line
   cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
 
+  // Detect and remove repetitive paragraphs
+  cleaned = removeRepetitiveContent(cleaned);
+
   // Ensure content starts with title (add one if missing)
   if (!cleaned.match(/^#\s/)) {
     const firstLine = cleaned.split("\n")[0];
@@ -135,6 +139,60 @@ export function cleanupContent(content: string): string {
   }
 
   return cleaned.trim();
+}
+
+/**
+ * Detect and remove repetitive content patterns
+ * This catches when the LLM generates the same sentence/paragraph multiple times
+ */
+function removeRepetitiveContent(content: string): string {
+  // Split into paragraphs
+  const paragraphs = content.split(/\n\n+/);
+  const seenParagraphs = new Set<string>();
+  const uniqueParagraphs: string[] = [];
+
+  for (const para of paragraphs) {
+    // Normalize for comparison (lowercase, remove extra whitespace)
+    const normalized = para.toLowerCase().replace(/\s+/g, " ").trim();
+
+    // Skip empty paragraphs
+    if (!normalized) continue;
+
+    // Check for exact duplicates
+    if (seenParagraphs.has(normalized)) {
+      continue; // Skip duplicate
+    }
+
+    // Check for near-duplicates (80% similarity)
+    let isDuplicate = false;
+    for (const seen of seenParagraphs) {
+      if (calculateSimilarity(normalized, seen) > 0.8) {
+        isDuplicate = true;
+        break;
+      }
+    }
+
+    if (!isDuplicate) {
+      seenParagraphs.add(normalized);
+      uniqueParagraphs.push(para);
+    }
+  }
+
+  return uniqueParagraphs.join("\n\n");
+}
+
+/**
+ * Calculate similarity between two strings (Jaccard similarity on words)
+ */
+function calculateSimilarity(str1: string, str2: string): number {
+  const words1 = new Set(str1.split(/\s+/));
+  const words2 = new Set(str2.split(/\s+/));
+
+  const intersection = new Set([...words1].filter(x => words2.has(x)));
+  const union = new Set([...words1, ...words2]);
+
+  if (union.size === 0) return 0;
+  return intersection.size / union.size;
 }
 
 /**

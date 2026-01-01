@@ -8,13 +8,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { VoiceRecorder, TranscriptPreview } from "@/components/voice";
 
-type RecordingStage = "recording" | "uploading" | "transcribing" | "complete";
+type RecordingStage = "recording" | "uploading" | "transcribing" | "complete" | "creating_session" | "generating";
 
 /**
  * Safely parse JSON from a Response, returning null if parsing fails.
  * Handles cases where server returns HTML error pages instead of JSON.
  */
-async function safeParseJSON(response: Response): Promise<{ error?: string } | null> {
+async function safeParseJSON(response: Response): Promise<{ error?: string; details?: string; hint?: string } | null> {
   try {
     const text = await response.text();
     // Check if response looks like HTML (error page)
@@ -113,28 +113,91 @@ export default function QuickCapturePage() {
     setStage("recording");
   };
 
-  const handleGenerateContent = () => {
-    // TODO: Navigate to content generation with transcription data
-    // For now, we'll just go to dashboard
-    router.push("/dashboard");
+  const handleGenerateContent = async () => {
+    if (!transcription) return;
+
+    setError(null);
+    setStage("creating_session");
+
+    try {
+      // Step 1: Create a session with the transcript
+      const sessionResponse = await fetch("/api/session/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "quick",
+          transcript: transcription.transcript,
+          durationSeconds: transcription.durationSeconds,
+          wordTimestamps: transcription.wordTimestamps,
+        }),
+      });
+
+      if (!sessionResponse.ok) {
+        const errorData = await safeParseJSON(sessionResponse);
+        const errorDetails = errorData?.details ? `: ${errorData.details}` : "";
+        const errorHint = errorData?.hint ? ` (${errorData.hint})` : "";
+        throw new Error((errorData?.error || "Failed to create session") + errorDetails + errorHint);
+      }
+
+      const sessionData = await sessionResponse.json();
+      const sessionId = sessionData.sessionId;
+
+      // Step 2: Generate content from the session
+      setStage("generating");
+
+      const generateResponse = await fetch("/api/content/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      });
+
+      if (!generateResponse.ok) {
+        const errorData = await safeParseJSON(generateResponse);
+        throw new Error(errorData?.error || "Failed to generate content");
+      }
+
+      const contentData = await generateResponse.json();
+
+      // Navigate to the generated content
+      router.push(`/content/${contentData.contentId}`);
+    } catch (err) {
+      console.error("Content generation error:", err);
+      setError(err instanceof Error ? err.message : "Failed to generate content");
+      setStage("complete"); // Return to complete state so user can retry
+    }
   };
 
   // Processing states
-  if (stage === "uploading" || stage === "transcribing") {
+  if (stage === "uploading" || stage === "transcribing" || stage === "creating_session" || stage === "generating") {
+    const messages: Record<string, { title: string; description: string }> = {
+      uploading: {
+        title: "Uploading...",
+        description: "Uploading your recording to the cloud",
+      },
+      transcribing: {
+        title: "Transcribing...",
+        description: "Converting your voice to text with AI",
+      },
+      creating_session: {
+        title: "Preparing...",
+        description: "Setting up your content session",
+      },
+      generating: {
+        title: "Generating Content...",
+        description: "Creating your article using your Voice DNA",
+      },
+    };
+
+    const message = messages[stage as keyof typeof messages];
+
     return (
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="max-w-md mx-auto">
           <div className="text-center space-y-6 py-12">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
             <div className="space-y-2">
-              <h2 className="text-xl font-semibold">
-                {stage === "uploading" ? "Uploading..." : "Transcribing..."}
-              </h2>
-              <p className="text-muted-foreground">
-                {stage === "uploading"
-                  ? "Uploading your recording to the cloud"
-                  : "Converting your voice to text with AI"}
-              </p>
+              <h2 className="text-xl font-semibold">{message?.title ?? "Processing..."}</h2>
+              <p className="text-muted-foreground">{message?.description ?? "Please wait"}</p>
             </div>
           </div>
         </div>

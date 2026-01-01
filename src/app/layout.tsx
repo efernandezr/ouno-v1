@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { BottomNav } from "@/components/bottom-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -15,6 +16,13 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   title: {
@@ -69,8 +77,11 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <SiteHeader />
-          <main id="main-content">{children}</main>
+          <main id="main-content" className="min-h-[calc(100vh-8rem)]">
+            {children}
+          </main>
           <SiteFooter />
+          <BottomNav />
           <Toaster richColors position="top-right" />
         </ThemeProvider>
       </body>

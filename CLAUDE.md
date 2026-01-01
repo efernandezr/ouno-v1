@@ -1,8 +1,14 @@
-# Agentic Coding Boilerplate - AI Assistant Guidelines
+# VoiceDNA - AI Assistant Guidelines
 
 ## Project Overview
 
-This is a Next.js 16 boilerplate for building AI-powered applications with authentication, database, and modern UI components.
+VoiceDNA is a voice-to-content platform that transforms spoken ideas into polished written content while preserving the user's authentic voice and style. Users record their thoughts, answer follow-up questions, and receive blog posts that sound like them—not generic AI output.
+
+### Core Concept
+
+**"Stop typing prompts. Start talking ideas."**
+
+The app learns each user's unique "Voice DNA"—their speaking patterns, vocabulary, tone, and style preferences—to generate content that authentically represents how they communicate.
 
 ### Tech Stack
 
@@ -13,238 +19,238 @@ This is a Next.js 16 boilerplate for building AI-powered applications with authe
 - **UI**: shadcn/ui components with Tailwind CSS 4
 - **Styling**: Tailwind CSS with dark mode support (next-themes)
 
-## AI Integration with OpenRouter
+## Key Features
 
-### Key Points
+### 1. Voice Recording & Transcription
+- Record voice memos (2-5 minutes)
+- Real-time audio visualization
+- Automatic transcription with word timestamps
+- Quick mode (fast capture) vs Guided mode (structured prompts)
 
-- This project uses **OpenRouter** as the AI provider, NOT direct OpenAI
-- OpenRouter provides access to 100+ AI models through a single unified API
-- Default model: `openai/gpt-5-mini` (configurable via `OPENROUTER_MODEL` env var)
-- Users browse models at: https://openrouter.ai/models
-- Users get API keys from: https://openrouter.ai/settings/keys
+### 2. Voice DNA Profiling
+- **Spoken Patterns**: Sentence structure, fillers, speech rhythm
+- **Written Patterns**: Preferred vocabulary, formatting style
+- **Tonal Attributes**: Formality level, enthusiasm, humor
+- **Referent Influences**: Style influences from writers/creators the user admires
 
-### AI Implementation Files
+### 3. Content Generation Pipeline
+1. User records voice → transcribed
+2. AI analyzes for enthusiasm and key topics
+3. Follow-up questions draw out more depth
+4. Content generated using Voice DNA profile
+5. User can refine/iterate on output
 
-- `src/app/api/chat/route.ts` - Chat API endpoint using OpenRouter
-- Package: `@openrouter/ai-sdk-provider` (not `@ai-sdk/openai`)
-- Import: `import { openrouter } from "@openrouter/ai-sdk-provider"`
+### 4. Onboarding Flow
+- `not_started` → `voice_intro` → `follow_ups` → `samples` → `complete`
+- Collects initial voice sample
+- Gathers writing samples for pattern extraction
+- Optional calibration rounds for fine-tuning
+
+### 5. Calibration System
+- Users rate generated samples (1-5)
+- Feedback improves Voice DNA accuracy
+- Learned rules stored for future generations
 
 ## Project Structure
 
 ```
 src/
-├── app/                          # Next.js App Router
-│   ├── (auth)/                  # Auth route group
-│   │   ├── login/               # Login page
-│   │   ├── register/            # Registration page
-│   │   ├── forgot-password/     # Forgot password page
-│   │   └── reset-password/      # Reset password page
+├── app/
+│   ├── (auth)/                  # Auth route group (login, register, etc.)
 │   ├── api/
-│   │   ├── auth/[...all]/       # Better Auth catch-all route
-│   │   ├── chat/route.ts        # AI chat endpoint (OpenRouter)
-│   │   └── diagnostics/         # System diagnostics
-│   ├── chat/page.tsx            # AI chat interface (protected)
-│   ├── dashboard/page.tsx       # User dashboard (protected)
-│   ├── profile/page.tsx         # User profile (protected)
-│   ├── page.tsx                 # Home/landing page
-│   └── layout.tsx               # Root layout
+│   │   ├── auth/[...all]/       # BetterAuth catch-all
+│   │   ├── voice/               # Voice upload, transcribe, analyze
+│   │   ├── voice-dna/           # Voice DNA profile CRUD
+│   │   ├── session/             # Voice session management
+│   │   │   ├── create/          # Create new session
+│   │   │   └── [id]/            # Session details, questions, responses
+│   │   ├── content/             # Content generation
+│   │   │   ├── generate/        # Generate content from session
+│   │   │   └── [id]/            # Content CRUD, refinement
+│   │   ├── onboarding/          # Onboarding flow endpoints
+│   │   ├── calibration/         # Calibration rounds
+│   │   ├── referents/           # Referent creators
+│   │   └── samples/             # Writing samples
+│   ├── dashboard/               # User dashboard
+│   ├── record/                  # Voice recording pages
+│   │   ├── quick/               # Quick recording mode
+│   │   └── guided/              # Guided recording mode
+│   ├── session/[id]/            # Session detail view
+│   ├── content/                 # Content viewing/editing
+│   ├── onboarding/              # Onboarding wizard
+│   ├── settings/                # User settings
+│   └── profile/                 # User profile
 ├── components/
 │   ├── auth/                    # Authentication components
-│   │   ├── sign-in-button.tsx   # Sign in form
-│   │   ├── sign-up-form.tsx     # Sign up form
-│   │   ├── forgot-password-form.tsx
-│   │   ├── reset-password-form.tsx
-│   │   ├── sign-out-button.tsx
-│   │   └── user-profile.tsx
-│   ├── ui/                      # shadcn/ui components
-│   │   ├── button.tsx
-│   │   ├── card.tsx
-│   │   ├── dialog.tsx
-│   │   ├── dropdown-menu.tsx
-│   │   ├── avatar.tsx
-│   │   ├── badge.tsx
-│   │   ├── separator.tsx
-│   │   ├── mode-toggle.tsx      # Dark/light mode toggle
-│   │   └── github-stars.tsx
-│   ├── site-header.tsx          # Main navigation header
-│   ├── site-footer.tsx          # Footer component
-│   ├── theme-provider.tsx       # Dark mode provider
-│   ├── setup-checklist.tsx      # Setup guide component
-│   └── starter-prompt-modal.tsx # Starter prompts modal
-└── lib/
-    ├── auth.ts                  # Better Auth server config
-    ├── auth-client.ts           # Better Auth client hooks
-    ├── db.ts                    # Database connection
-    ├── schema.ts                # Drizzle schema (users, sessions, etc.)
-    ├── storage.ts               # File storage abstraction (Vercel Blob / local)
-    └── utils.ts                 # Utility functions (cn, etc.)
+│   ├── voice/                   # Voice recording components
+│   │   ├── VoiceRecorder.tsx    # Main recorder component
+│   │   ├── AudioVisualizer.tsx  # Real-time audio visualization
+│   │   ├── RecordingControls.tsx
+│   │   └── TranscriptPreview.tsx
+│   ├── voice-dna/               # Voice DNA components
+│   │   ├── VoiceDNACard.tsx     # Profile display
+│   │   ├── CalibrationFlow.tsx  # Calibration wizard
+│   │   └── StrengthIndicator.tsx
+│   ├── session/                 # Session-related components
+│   ├── content/                 # Content display/editing
+│   ├── onboarding/              # Onboarding components
+│   └── ui/                      # shadcn/ui components
+├── lib/
+│   ├── auth.ts                  # BetterAuth server config
+│   ├── auth-client.ts           # BetterAuth client hooks
+│   ├── db.ts                    # Database connection
+│   ├── schema.ts                # Drizzle schema
+│   ├── storage.ts               # File storage (Vercel Blob / local)
+│   └── utils.ts                 # Utility functions
+└── types/
+    ├── voice.ts                 # Voice recording types
+    ├── voiceDNA.ts              # Voice DNA profile types
+    ├── session.ts               # Session types
+    ├── content.ts               # Content types
+    ├── calibration.ts           # Calibration types
+    └── referent.ts              # Referent creator types
 ```
+
+## Database Schema
+
+### Core Tables
+
+| Table | Purpose |
+|-------|---------|
+| `user` | User accounts with onboarding status |
+| `voice_dna_profiles` | Voice DNA data per user |
+| `voice_sessions` | Recording sessions with transcripts |
+| `generated_content` | Blog posts/articles from sessions |
+| `writing_samples` | User-provided writing samples |
+| `referent_creators` | Style influence profiles |
+| `calibration_rounds` | Calibration feedback data |
+
+### Key Enums
+
+- `onboarding_status`: not_started, voice_intro, follow_ups, samples, complete
+- `session_mode`: quick, guided
+- `session_status`: recording, transcribing, analyzing, follow_ups, generating, complete, error
+- `content_status`: draft, final, published
 
 ## Environment Variables
 
-Required environment variables (see `env.example`):
-
 ```env
 # Database
-POSTGRES_URL=postgresql://user:password@localhost:5432/db_name
+POSTGRES_URL=postgresql://user:password@localhost:5432/voicedna
 
-# Better Auth
+# BetterAuth
 BETTER_AUTH_SECRET=32-char-random-string
 
 # AI via OpenRouter
 OPENROUTER_API_KEY=sk-or-v1-your-key
-OPENROUTER_MODEL=openai/gpt-5-mini  # or any model from openrouter.ai/models
+OPENROUTER_MODEL=openai/gpt-4o-mini
 
 # App
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-# File Storage (optional)
-BLOB_READ_WRITE_TOKEN=  # Leave empty for local dev, set for Vercel Blob in production
+# File Storage (optional - for voice uploads)
+BLOB_READ_WRITE_TOKEN=
 ```
 
 ## Available Scripts
 
 ```bash
-npm run dev          # Start dev server (DON'T run this yourself - ask user)
-npm run build        # Build for production (runs db:migrate first)
-npm run build:ci     # Build without database (for CI/CD pipelines)
-npm run start        # Start production server
-npm run lint         # Run ESLint (ALWAYS run after changes)
-npm run typecheck    # TypeScript type checking (ALWAYS run after changes)
-npm run db:generate  # Generate database migrations
-npm run db:migrate   # Run database migrations
-npm run db:push      # Push schema changes to database
-npm run db:studio    # Open Drizzle Studio (database GUI)
-npm run db:dev       # Push schema for development
-npm run db:reset     # Reset database (drop all tables)
+pnpm dev          # Start dev server (DON'T run - ask user)
+pnpm build        # Build for production
+pnpm lint         # Run ESLint (ALWAYS run after changes)
+pnpm typecheck    # TypeScript checking (ALWAYS run after changes)
+pnpm db:generate  # Generate migrations
+pnpm db:migrate   # Run migrations
+pnpm db:push      # Push schema changes
+pnpm db:studio    # Open Drizzle Studio
 ```
-
-## Documentation Files
-
-The project includes technical documentation in `docs/`:
-
-- `docs/technical/ai/streaming.md` - AI streaming implementation guide
-- `docs/technical/ai/structured-data.md` - Structured data extraction
-- `docs/technical/react-markdown.md` - Markdown rendering guide
-- `docs/technical/betterauth/polar.md` - Polar payment integration
-- `docs/business/starter-prompt.md` - Business context for AI prompts
 
 ## Guidelines for AI Assistants
 
-### CRITICAL RULES
+### Critical Rules
 
-1. **ALWAYS run lint and typecheck** after completing changes:
-
+1. **ALWAYS run lint and typecheck** after changes:
    ```bash
-   npm run lint && npm run typecheck
+   pnpm lint && pnpm typecheck
    ```
 
-2. **NEVER start the dev server yourself**
-
-   - If you need dev server output, ask the user to provide it
-   - Don't run `npm run dev` or `pnpm dev`
+2. **NEVER start the dev server yourself** - ask user for output
 
 3. **Use OpenRouter, NOT OpenAI directly**
+   - Import: `import { openrouter } from "@openrouter/ai-sdk-provider"`
+   - Model format: `provider/model-name`
 
-   - Import from `@openrouter/ai-sdk-provider`
-   - Use `openrouter()` function, not `openai()`
-   - Model names follow OpenRouter format: `provider/model-name`
+4. **Understand the data flow**:
+   - Voice → Transcript → Analysis → Follow-ups → Content
+   - Voice DNA profile influences all generated content
 
-4. **Styling Guidelines**
+5. **Session states matter**:
+   - Sessions progress through defined statuses
+   - Don't skip states or make invalid transitions
 
-   - Stick to standard Tailwind CSS utility classes
-   - Use shadcn/ui color tokens (e.g., `bg-background`, `text-foreground`)
-   - Avoid custom colors unless explicitly requested
-   - Support dark mode with appropriate Tailwind classes
-
-5. **Authentication**
-
-   - Server-side: Import from `@/lib/auth` (Better Auth instance)
-   - Client-side: Import hooks from `@/lib/auth-client`
-   - Protected routes should check session in Server Components
-   - Use existing auth components from `src/components/auth/`
-
-6. **Database Operations**
-
-   - Use Drizzle ORM (imported from `@/lib/db`)
-   - Schema is defined in `@/lib/schema`
-   - Always run migrations after schema changes
-   - PostgreSQL is the database (not SQLite, MySQL, etc.)
-
-7. **File Storage**
-
-   - Use the storage abstraction from `@/lib/storage`
-   - Automatically uses local storage (dev) or Vercel Blob (production)
-   - Import: `import { upload, deleteFile } from "@/lib/storage"`
-   - Example: `const result = await upload(buffer, "avatar.png", "avatars")`
-   - Storage switches based on `BLOB_READ_WRITE_TOKEN` environment variable
-
-8. **Component Creation**
-
-   - Use existing shadcn/ui components when possible
-   - Follow the established patterns in `src/components/ui/`
-   - Support both light and dark modes
-   - Use TypeScript with proper types
-
-9. **API Routes**
-   - Follow Next.js 16 App Router conventions
-   - Use Route Handlers (route.ts files)
-   - Return Response objects
-   - Handle errors appropriately
-
-### Best Practices
-
-- Read existing code patterns before creating new features
-- Maintain consistency with established file structure
-- Use the documentation files when implementing related features
-- Test changes with lint and typecheck before considering complete
-- When modifying AI functionality, refer to `docs/technical/ai/` guides
+6. **Voice DNA is central**:
+   - All content generation should use the user's Voice DNA
+   - Calibration improves accuracy over time
 
 ### Common Tasks
 
-**Adding a new page:**
+**Adding a new session feature:**
+1. Update types in `src/types/session.ts`
+2. Modify schema if needed (`src/lib/schema.ts`)
+3. Add/update API route in `src/app/api/session/`
+4. Update session components in `src/components/session/`
 
-1. Create in `src/app/[route]/page.tsx`
-2. Use Server Components by default
-3. Add to navigation if needed
+**Modifying content generation:**
+1. Check `src/app/api/content/generate/route.ts`
+2. Understand Voice DNA usage in prompts
+3. Reference `src/types/voiceDNA.ts` for profile structure
 
-**Adding a new API route:**
+**Working with Voice DNA:**
+1. Profile stored in `voice_dna_profiles` table
+2. Components in `src/components/voice-dna/`
+3. API at `src/app/api/voice-dna/`
 
-1. Create in `src/app/api/[route]/route.ts`
-2. Export HTTP method handlers (GET, POST, etc.)
-3. Use proper TypeScript types
+**Updating onboarding:**
+1. Flow defined by `onboarding_status` enum
+2. API routes in `src/app/api/onboarding/`
+3. Components in `src/components/onboarding/`
 
-**Adding authentication to a page:**
+### Type Definitions
 
-1. Import auth instance: `import { auth } from "@/lib/auth"`
-2. Get session: `const session = await auth.api.getSession({ headers: await headers() })`
-3. Check session and redirect if needed
+Key types to understand:
 
-**Working with the database:**
+```typescript
+// Voice DNA Profile structure
+interface VoiceDNA {
+  spokenPatterns: SpokenPatterns;
+  writtenPatterns: WrittenPatterns;
+  tonalAttributes: TonalAttributes;
+  referentInfluences: ReferentInfluences;
+  learnedRules: LearnedRule[];
+}
 
-1. Update schema in `src/lib/schema.ts`
-2. Generate migration: `npm run db:generate`
-3. Apply migration: `npm run db:migrate`
-4. Import `db` from `@/lib/db` to query
+// Session with full context
+interface VoiceSession {
+  id: string;
+  mode: 'quick' | 'guided';
+  status: SessionStatus;
+  transcript: string;
+  enthusiasmAnalysis: EnthusiasmAnalysis;
+  followUpQuestions: FollowUpQuestion[];
+  followUpResponses: FollowUpResponse[];
+}
+```
 
-**Modifying AI chat:**
+### Best Practices
 
-1. Backend: `src/app/api/chat/route.ts`
-2. Frontend: `src/app/chat/page.tsx`
-3. Reference streaming docs: `docs/technical/ai/streaming.md`
-4. Remember to use OpenRouter, not direct OpenAI
-
-**Working with file storage:**
-
-1. Import storage functions: `import { upload, deleteFile } from "@/lib/storage"`
-2. Upload files: `const result = await upload(fileBuffer, "filename.png", "folder")`
-3. Delete files: `await deleteFile(result.url)`
-4. Storage automatically uses local filesystem in dev, Vercel Blob in production
-5. Local files are saved to `public/uploads/` and served at `/uploads/`
+- Read existing patterns before creating new features
+- Voice DNA should feel personal, not generic
+- Follow-up questions should draw out unique insights
+- Content should preserve the user's authentic voice
+- Calibration feedback is valuable—use it to improve
 
 ## Package Manager
 
 This project uses **pnpm** (see `pnpm-lock.yaml`). When running commands:
-
-- Use `pnpm` instead of `npm` when possible
-- Scripts defined in package.json work with `pnpm run [script]`
+- Use `pnpm` instead of `npm`
+- Scripts: `pnpm run [script]` or `pnpm [script]`

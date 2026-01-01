@@ -184,9 +184,35 @@ export default function GuidedSessionPage() {
     setStage("intro");
   };
 
-  const handleGenerateContent = () => {
-    // TODO: Navigate to content generation with full transcription data
-    router.push("/dashboard");
+  const handleGenerateContent = async () => {
+    setError(null);
+    setStage("transcribing"); // Reuse processing state for visual feedback
+
+    try {
+      // Create a session with the full transcript data
+      const response = await fetch("/api/session/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "guided",
+          transcript: fullTranscript,
+          durationSeconds: totalDuration,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create session");
+      }
+
+      const { sessionId } = await response.json();
+
+      // Navigate to session page for content generation
+      router.push(`/session/${sessionId}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate content");
+      setStage("complete");
+    }
   };
 
   // Progress percentage
