@@ -1,7 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { Mic, Sparkles, ChevronRight, Settings, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
