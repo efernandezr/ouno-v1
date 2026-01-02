@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AdminBadge } from "@/components/auth/AdminBadge";
 import { UserProfile } from "@/components/auth/user-profile";
 import { OunoLogo } from "@/components/brand/OunoLogo";
 import { useSession } from "@/lib/auth-client";
@@ -36,6 +37,7 @@ export function SiteHeader() {
             </Link>
           </h1>
           <div className="flex items-center gap-4" role="group" aria-label="User actions">
+            <AdminBadge />
             <UserProfile />
             <ModeToggle />
           </div>

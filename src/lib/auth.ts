@@ -1,6 +1,9 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { customSession } from "better-auth/plugins";
+import { eq } from "drizzle-orm";
 import { db } from "./db";
+import { user } from "./schema";
 
 export const auth = betterAuth({
   baseURL:
@@ -34,4 +37,22 @@ export const auth = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     },
   },
+  plugins: [
+    customSession(async ({ user: sessionUser, session }) => {
+      // Fetch user role from database to include in session
+      const [dbUser] = await db
+        .select({ role: user.role })
+        .from(user)
+        .where(eq(user.id, sessionUser.id))
+        .limit(1);
+
+      return {
+        user: { ...sessionUser, role: dbUser?.role ?? "user" },
+        session,
+      };
+    }),
+  ],
 });
+
+// Export the auth type for client plugin typing
+export type Auth = typeof auth;
