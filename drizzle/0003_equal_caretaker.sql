@@ -1,0 +1,2 @@
+CREATE TYPE "public"."content_template" AS ENUM('blog_post', 'listicle', 'narrative');--> statement-breakpoint
+ALTER TABLE "generated_content" ADD COLUMN "template" "content_template" DEFAULT 'blog_post' NOT NULL;

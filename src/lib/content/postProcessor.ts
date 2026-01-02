@@ -106,39 +106,122 @@ export function calculateReadTime(wordCount: number): number {
 }
 
 /**
+ * Patterns that indicate LLM preambles to remove
+ */
+const PREAMBLE_PATTERNS = [
+  // Opening phrases with colon
+  /^(Here's|Here is|Below is|I've created|I've written|I have created|I have written|This is|Based on|Following|Using|After analyzing|Drawing from|After reviewing).*?:\s*\n+/i,
+  // Offers to help
+  /^(Let me|I'll|I will|Allow me to|I'd be happy to|I'm happy to|I can).*?\n+/i,
+  // Enthusiasm starters
+  /^(Great!|Sure!|Absolutely!|Of course!|Certainly!|Perfect!|Wonderful!).*?\n+/i,
+  // Transcript references
+  /^(Based on|From|Using|According to) (your|the) (transcript|recording|voice|session|input|words|thoughts).*?\n+/i,
+  /^(Your|The) (transcript|recording|voice session|input) (shows|indicates|reveals|contains|demonstrates|expresses).*?\n+/i,
+  // Meta comments about the content
+  /^(This article|This post|This piece|The following|What follows).*?\n+/i,
+];
+
+/**
+ * Prompt section headers that may leak into output
+ */
+const LEAKED_SECTION_PATTERNS = [
+  /^##?\s*(CRITICAL|OUTPUT|VOICE DNA|REFERENT|BLENDING|CONTENT STRUCTURE|ENTHUSIASM)\s*(INSTRUCTION|REQUIREMENTS|PROFILE|INFLUENCES|RULES|MAP)?s?\s*\n/gim,
+  /^##?\s*(THEIR ORIGINAL|EXPANDED THOUGHTS|STRUCTURE PREFERENCES|SPEAKING STYLE|TONAL PROFILE|FOR SHORT TRANSCRIPTS)\s*.*?\n/gim,
+  /^##?\s*(Note:|PRIMARY|INFLUENCE|STYLE|FORMAT:)\s*.*?\n/gim,
+];
+
+/**
+ * Patterns that indicate raw transcript leaked into output
+ */
+const TRANSCRIPT_LEAK_PATTERNS = [
+  /^"""[\s\S]*?"""\s*\n/gm, // Triple-quoted blocks
+  /^Q:\s+.*?\nA:\s+"""/gm, // Q&A format from follow-ups
+];
+
+/**
+ * Trailing artifacts to remove
+ */
+const TRAILING_PATTERNS = [
+  /\n+---\s*\n*(Note:|Remember:|Important:|This article|I hope|Feel free|Let me know|If you)[\s\S]*$/i,
+  /\n+\[.*?(generated|created|written|based on|by Claude|by AI).*?\]\s*$/i,
+  /\n+\*+.*?(generated|created|written|based on).*?\*+\s*$/i,
+  /\n+_{3,}\s*\n*[\s\S]{0,200}$/i, // Trailing underscores with short text
+];
+
+/**
  * Clean up generated content
- * - Ensures proper markdown formatting
- * - Removes any instruction artifacts
+ * - Removes ALL instruction artifacts and preambles
+ * - Removes leaked prompt section headers
+ * - Removes transcript leak patterns
  * - Normalizes whitespace
  * - Detects and removes repetitive content
  */
 export function cleanupContent(content: string): string {
   let cleaned = content;
 
-  // Remove any artifacts that might be left from LLM instructions
-  cleaned = cleaned.replace(/^(Here's|Here is|Below is).*?:\s*\n+/i, "");
-
-  // Remove trailing instruction-like content
-  cleaned = cleaned.replace(/\n+---\s*\n*(Note:|Remember:|Important:)[\s\S]*$/i, "");
-
-  // Normalize multiple consecutive blank lines to single blank line
-  cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
-
-  // Detect and remove repetitive paragraphs
-  cleaned = removeRepetitiveContent(cleaned);
-
-  // Ensure content starts with title (add one if missing)
-  if (!cleaned.match(/^#\s/)) {
-    const firstLine = cleaned.split("\n")[0];
-    if (firstLine && !firstLine.startsWith("#")) {
-      // Check if first line looks like a title
-      if (firstLine.length < 100 && !firstLine.startsWith("-") && !firstLine.startsWith("*")) {
-        cleaned = `# ${firstLine}\n\n${cleaned.substring(firstLine.length).trim()}`;
-      }
+  // 1. Remove preambles (apply multiple times for nested preambles)
+  for (let i = 0; i < 3; i++) {
+    for (const pattern of PREAMBLE_PATTERNS) {
+      cleaned = cleaned.replace(pattern, "");
     }
+    cleaned = cleaned.trim();
   }
 
+  // 2. Remove leaked prompt sections
+  for (const pattern of LEAKED_SECTION_PATTERNS) {
+    cleaned = cleaned.replace(pattern, "");
+  }
+
+  // 3. Remove transcript leak patterns
+  for (const pattern of TRANSCRIPT_LEAK_PATTERNS) {
+    cleaned = cleaned.replace(pattern, "");
+  }
+
+  // 4. Remove trailing artifacts
+  for (const pattern of TRAILING_PATTERNS) {
+    cleaned = cleaned.replace(pattern, "");
+  }
+
+  // 5. Normalize whitespace
+  cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
+  cleaned = cleaned.replace(/^\s*\n+/, "");
+
+  // 6. Remove repetitive content
+  cleaned = removeRepetitiveContent(cleaned);
+
+  // 7. Ensure proper title formatting
+  cleaned = ensureProperTitle(cleaned);
+
   return cleaned.trim();
+}
+
+/**
+ * Ensure content starts with a proper H1 title
+ */
+function ensureProperTitle(content: string): string {
+  // Check if content already starts with proper H1
+  if (content.match(/^#\s+[^#\n]/)) {
+    return content;
+  }
+
+  // Check if first line could be a title
+  const lines = content.split("\n");
+  const firstLine = lines[0]?.trim();
+
+  if (
+    firstLine &&
+    firstLine.length < 100 &&
+    !firstLine.startsWith("-") &&
+    !firstLine.startsWith("*") &&
+    !firstLine.startsWith(">") &&
+    !firstLine.startsWith("##")
+  ) {
+    // Promote first line to H1
+    return `# ${firstLine}\n\n${lines.slice(1).join("\n").trim()}`;
+  }
+
+  return content;
 }
 
 /**

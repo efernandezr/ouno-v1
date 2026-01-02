@@ -1,5 +1,6 @@
----
+/dange---
 description: Publish a feature from /specs to GitHub Issues and Projects
+
 ---
 
 # Publish Feature to GitHub

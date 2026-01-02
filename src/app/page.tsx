@@ -1,8 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { ArrowRight, Sparkles, Clock, User, Mic } from "lucide-react";
 import { OunoLogo } from "@/components/brand/OunoLogo";
 import { Button } from "@/components/ui/button";

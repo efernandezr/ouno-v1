@@ -4,9 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, ArrowLeft, Sparkles } from "lucide-react";
+import { TemplateSelector } from "@/components/content/TemplateSelector";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { VoiceRecorder, TranscriptPreview } from "@/components/voice";
+import type { ContentTemplate } from "@/types/content";
 
 type RecordingStage = "recording" | "uploading" | "transcribing" | "complete" | "creating_session" | "generating";
 
@@ -51,6 +54,7 @@ export default function ThoughtStreamPage() {
   const [stage, setStage] = useState<RecordingStage>("recording");
   const [error, setError] = useState<string | null>(null);
   const [transcription, setTranscription] = useState<TranscriptionResult | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<ContentTemplate>("blog_post");
 
   const handleRecordingComplete = async (audioBlob: Blob, _duration: number) => {
     setError(null);
@@ -148,7 +152,7 @@ export default function ThoughtStreamPage() {
       const generateResponse = await fetch("/api/content/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId }),
+        body: JSON.stringify({ sessionId, template: selectedTemplate }),
       });
 
       if (!generateResponse.ok) {
@@ -232,6 +236,15 @@ export default function ThoughtStreamPage() {
             duration={transcription.durationSeconds}
             wordCount={transcription.wordTimestamps.length}
           />
+
+          {/* Template Selection */}
+          <div className="space-y-3">
+            <Label className="text-base font-medium">Choose a format</Label>
+            <TemplateSelector
+              value={selectedTemplate}
+              onChange={setSelectedTemplate}
+            />
+          </div>
 
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-3">

@@ -2,13 +2,16 @@
 
 import { useEffect, useState, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, ArrowLeft, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, Loader2, Sparkles } from "lucide-react";
+import { TemplateSelector } from "@/components/content/TemplateSelector";
 import { FollowUpQuestion } from "@/components/session/FollowUpQuestion";
 import { SessionProgress } from "@/components/session/SessionProgress";
 import { TextResponse } from "@/components/session/TextResponse";
 import { VoiceResponse } from "@/components/session/VoiceResponse";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import type { ContentTemplate } from "@/types/content";
 import type {
   FollowUpQuestion as FollowUpQuestionType,
   VoiceSession,
@@ -48,6 +51,8 @@ export default function SessionPage({ params }: SessionPageProps) {
   const [currentQuestion, setCurrentQuestion] =
     useState<FollowUpQuestionType | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<ContentTemplate>("blog_post");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Fetch session data
   const fetchSession = useCallback(async () => {
@@ -228,6 +233,37 @@ export default function SessionPage({ params }: SessionPageProps) {
     await submitResponse(currentQuestion.id, "skip");
   };
 
+  // Handle content generation with template
+  const handleGenerateContent = async () => {
+    if (!session) return;
+
+    setIsGenerating(true);
+    setError(null);
+
+    try {
+      const generateResponse = await fetch("/api/content/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          template: selectedTemplate,
+        }),
+      });
+
+      if (!generateResponse.ok) {
+        const errorData = await generateResponse.json();
+        throw new Error(errorData?.error || "Failed to generate content");
+      }
+
+      const contentData = await generateResponse.json();
+      router.push(`/content/${contentData.contentId}`);
+    } catch (err) {
+      console.error("Content generation error:", err);
+      setError(err instanceof Error ? err.message : "Failed to generate content");
+      setIsGenerating(false);
+    }
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -382,11 +418,41 @@ export default function SessionPage({ params }: SessionPageProps) {
             {!currentQuestion &&
               questionsLength > 0 &&
               answeredLength >= questionsLength && (
-                <div className="flex flex-col items-center gap-4 py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-muted-foreground">
-                    All questions answered! Preparing to generate content...
-                  </p>
+                <div className="max-w-lg mx-auto space-y-6 py-8">
+                  <div className="text-center space-y-2">
+                    <h2 className="text-xl font-semibold">Ready to generate</h2>
+                    <p className="text-muted-foreground">
+                      Choose a format for your content
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-base font-medium">Choose a format</Label>
+                    <TemplateSelector
+                      value={selectedTemplate}
+                      onChange={setSelectedTemplate}
+                      disabled={isGenerating}
+                    />
+                  </div>
+
+                  <Button
+                    onClick={handleGenerateContent}
+                    disabled={isGenerating}
+                    className="w-full gap-2"
+                    size="lg"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4" />
+                        Generate Content
+                      </>
+                    )}
+                  </Button>
                 </div>
               )}
           </>

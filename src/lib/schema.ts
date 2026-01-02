@@ -62,6 +62,12 @@ export const contentStatusEnum = pgEnum("content_status", [
   "published",
 ]);
 
+export const contentTemplateEnum = pgEnum("content_template", [
+  "blog_post",
+  "listicle",
+  "narrative",
+]);
+
 export const responseTypeEnum = pgEnum("response_type", [
   "voice",
   "text",
@@ -253,6 +259,7 @@ export const generatedContent = pgTable(
     parentVersionId: uuid("parent_version_id"),
     modelUsed: text("model_used"),
     generationTimeMs: integer("generation_time_ms"),
+    template: contentTemplateEnum("template").default("blog_post").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

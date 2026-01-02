@@ -25,11 +25,15 @@ import {
 import { db } from "@/lib/db";
 import { voiceSessions, generatedContent } from "@/lib/schema";
 import { isValidUUID } from "@/lib/validation";
+import type { ContentTemplate } from "@/types/content";
 
 const MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-sonnet-4";
 
+const VALID_TEMPLATES: ContentTemplate[] = ["blog_post", "listicle", "narrative"];
+
 interface GenerateRequest {
   sessionId: string;
+  template?: ContentTemplate;
 }
 
 /**
@@ -56,12 +60,20 @@ export async function POST(request: Request) {
     }
 
     const body = (await request.json()) as GenerateRequest;
-    const { sessionId } = body;
+    const { sessionId, template = "blog_post" } = body;
 
     // Validate sessionId
     if (!sessionId || !isValidUUID(sessionId)) {
       return NextResponse.json(
         { error: "Invalid session ID format" },
+        { status: 400 }
+      );
+    }
+
+    // Validate template
+    if (!VALID_TEMPLATES.includes(template)) {
+      return NextResponse.json(
+        { error: "Invalid template. Must be blog_post, listicle, or narrative" },
         { status: 400 }
       );
     }
@@ -143,6 +155,7 @@ export async function POST(request: Request) {
       contentOutline: voiceSession.contentOutline,
       followUpResponses: voiceSession.followUpResponses || [],
       ...(followUpQuestions && { followUpQuestions }),
+      template,
     };
 
     // Build the prompt
@@ -190,6 +203,7 @@ export async function POST(request: Request) {
         version: 1,
         modelUsed: MODEL,
         generationTimeMs,
+        template,
       })
       .returning();
 

@@ -8,9 +8,9 @@
 
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { eq, desc } from "drizzle-orm";
-import { generateText } from "ai";
 import { openrouter } from "@openrouter/ai-sdk-provider";
+import { generateText } from "ai";
+import { eq, desc } from "drizzle-orm";
 import { rebuildVoiceDNA } from "@/lib/analysis/voiceDNABuilder";
 import { extractWritingPatterns } from "@/lib/analysis/writingSampleAnalyzer";
 import { auth } from "@/lib/auth";

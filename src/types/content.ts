@@ -6,6 +6,29 @@ import type { VoiceDNA, ReferentInfluences } from "./voiceDNA";
 
 export type ContentStatus = "draft" | "final" | "published";
 
+export type ContentTemplate = "blog_post" | "listicle" | "narrative";
+
+export const CONTENT_TEMPLATES: Record<
+  ContentTemplate,
+  { name: string; description: string; icon: string }
+> = {
+  blog_post: {
+    name: "Standard Article",
+    description: "Traditional blog format with sections and flow",
+    icon: "FileText",
+  },
+  listicle: {
+    name: "Key Points",
+    description: "Numbered list of takeaways and insights",
+    icon: "ListOrdered",
+  },
+  narrative: {
+    name: "Personal Story",
+    description: "First-person narrative without rigid structure",
+    icon: "BookOpen",
+  },
+};
+
 export interface GeneratedContent {
   id: string;
   userId: string;
@@ -21,6 +44,7 @@ export interface GeneratedContent {
   parentVersionId: string | null;
   modelUsed: string | null;
   generationTimeMs: number | null;
+  template: ContentTemplate;
   createdAt: Date;
   updatedAt: Date;
 }

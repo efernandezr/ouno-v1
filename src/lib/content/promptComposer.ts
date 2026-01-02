@@ -6,6 +6,7 @@
  */
 
 import { getReferentProfile } from "@/lib/referents/profiles";
+import type { ContentTemplate } from "@/types/content";
 import type { EnthusiasmAnalysis, ContentOutline, FollowUpResponse } from "@/types/session";
 import type { VoiceDNA, ReferentInfluences, TonalAttributes } from "@/types/voiceDNA";
 
@@ -16,7 +17,39 @@ export interface GenerationContext {
   contentOutline: ContentOutline | null;
   followUpResponses: FollowUpResponse[];
   followUpQuestions?: Array<{ id: string; question: string }>;
+  template?: ContentTemplate;
 }
+
+/**
+ * Template-specific formatting instructions
+ */
+const TEMPLATE_INSTRUCTIONS: Record<ContentTemplate, string> = {
+  blog_post: `FORMAT: Standard Article
+- Start with a compelling title (# Heading) that captures the main idea
+- Write an engaging introduction (2-3 paragraphs) that hooks the reader
+- Use ## headings to organize into 2-4 logical sections
+- Each section should flow naturally from the previous
+- End with a conclusion that reinforces the main message
+- Use **bold** for key points, > blockquotes for impactful statements`,
+
+  listicle: `FORMAT: Key Points List
+- Start with a title (# Heading) that promises specific insights
+- Write a brief intro (1-2 paragraphs) setting up the list
+- Present 3-7 numbered points, each with:
+  - A clear, bold point heading (## 1. Point Title)
+  - 1-2 paragraphs of explanation
+  - Their actual words as supporting quotes where relevant
+- End with a brief wrap-up (1 paragraph max)`,
+
+  narrative: `FORMAT: Personal Story
+- Start with a title (# Heading) that captures the essence
+- Write in first-person, flowing narrative
+- Avoid rigid section breaks - let the story breathe
+- Use paragraph breaks for pacing, not ## headings
+- Include their actual phrases and expressions naturally
+- Build toward a meaningful insight or realization
+- Let the ending emerge organically from the narrative`,
+};
 
 /**
  * Build the complete generation prompt with Voice DNA injection
@@ -29,6 +62,7 @@ export function buildGenerationPrompt(context: GenerationContext): string {
     contentOutline,
     followUpResponses,
     followUpQuestions,
+    template = "blog_post",
   } = context;
 
   const sections: string[] = [];
@@ -55,8 +89,8 @@ export function buildGenerationPrompt(context: GenerationContext): string {
   // Structure guidance
   sections.push(buildStructureSection(contentOutline, voiceDNA));
 
-  // Output requirements
-  sections.push(buildOutputRequirements(voiceDNA));
+  // Output requirements (with template)
+  sections.push(buildOutputRequirements(voiceDNA, template));
 
   return sections.join("\n\n");
 }
@@ -66,6 +100,13 @@ export function buildGenerationPrompt(context: GenerationContext): string {
  */
 export function getGenerationSystemPrompt(): string {
   return `You are a skilled content writer who transforms spoken thoughts into polished written content while preserving the speaker's authentic voice.
+
+CRITICAL OUTPUT RULES:
+- Start DIRECTLY with the title (# Heading) - NO preambles
+- NEVER say "Here's", "Based on", "I've created", or similar phrases
+- NEVER include instructions or section markers from the prompt
+- Output ONLY the final article in clean markdown
+- The output should be ready to copy-paste directly to a blog
 
 Your role is to structure and polish, NOT to add your own ideas or change the speaker's perspective. The spoken words ARE the content—your job is to organize them into readable, engaging prose.
 
@@ -305,7 +346,7 @@ ${outline.sections
   return parts.join("\n");
 }
 
-function buildOutputRequirements(voiceDNA: VoiceDNA): string {
+function buildOutputRequirements(voiceDNA: VoiceDNA, template: ContentTemplate = "blog_post"): string {
   const formality = voiceDNA.writtenPatterns?.formality ?? 0.5;
   const formalityNote =
     formality < 0.3
@@ -314,33 +355,24 @@ function buildOutputRequirements(voiceDNA: VoiceDNA): string {
         ? "polished, professional"
         : "balanced, approachable";
 
-  const hasProfile = voiceDNA.spokenPatterns || voiceDNA.writtenPatterns || voiceDNA.tonalAttributes;
+  const templateInstructions = TEMPLATE_INSTRUCTIONS[template];
 
   return `## OUTPUT REQUIREMENTS
 
-1. Write in markdown format with a clear structure
-2. Start with a compelling title (# Heading) that captures their main idea
-3. Use ## for major sections to organize the content
-4. Keep their authentic voice—tone should be ${formalityNote}
-5. Emphasize key points with **bold** or > blockquotes
-6. Include their actual phrases—don't paraphrase unique expressions
-7. Create well-structured paragraphs with smooth transitions
-8. End with a strong conclusion that reinforces their message
+${templateInstructions}
 
-${hasProfile ? "" : `### For Short Transcripts:
-Since this transcript is brief, expand thoughtfully:
-- Elaborate on each key point they mentioned
-- Add introductory context that sets up their ideas
-- Create logical sections that explore different aspects
-- Provide a conclusion that summarizes their perspective
-- NEVER repeat the same sentence or phrase multiple times`}
+STYLE:
+- Keep their authentic voice—tone should be ${formalityNote}
+- Include their actual phrases—don't paraphrase unique expressions
+- Create smooth transitions between ideas
 
 CRITICAL RULES:
+- Start DIRECTLY with the title - NO preambles or introductory text
 - Do NOT add facts, statistics, or examples they didn't mention
 - Do NOT change their perspective or opinions
 - Do NOT make the content more formal than their natural speech
 - Do NOT repeat sentences or create filler content
-- Do NOT just echo what they said—transform it into readable prose
+- Do NOT include any meta-commentary about the content
 - Each paragraph should add new value, not repeat previous content`;
 }
 
