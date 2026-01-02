@@ -117,6 +117,11 @@ src/
 │   │   ├── VoiceDNACard.tsx     # Profile display
 │   │   ├── CalibrationFlow.tsx  # Calibration wizard
 │   │   └── StrengthIndicator.tsx
+│   ├── samples/                 # Writing sample components
+│   │   ├── WritingSamplesSection.tsx  # Sample list container
+│   │   ├── SampleCard.tsx       # Individual sample with view/delete
+│   │   ├── SampleUploadDialog.tsx     # Upload dialog (paste/URL/file)
+│   │   └── SampleViewDialog.tsx # View full sample content
 │   ├── session/                 # Spark-related components
 │   ├── content/                 # Content display/editing
 │   ├── onboarding/              # Onboarding components
@@ -244,6 +249,14 @@ pnpm db:studio    # Open Drizzle Studio
 1. Flow defined by `onboarding_status` enum
 2. API routes in `src/app/api/onboarding/`
 3. Components in `src/components/onboarding/`
+
+**Working with writing samples:**
+1. Upload methods: paste, URL (with LLM extraction), file
+2. URL import uses Jina.ai Reader + OpenRouter LLM to extract article body only
+3. LLM strips markdown formatting and converts to plain text
+4. API routes: `src/app/api/samples/` (GET list, POST create) and `src/app/api/samples/[id]/` (GET full content, DELETE)
+5. Components in `src/components/samples/`
+6. Samples are analyzed and merged into Ouno Core profile automatically via `rebuildVoiceDNA()`
 
 **Using the logo:**
 ```tsx

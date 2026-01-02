@@ -29,8 +29,10 @@ The app learns your unique communication style:
 4. Content generated using your Ouno Core profile
 5. Refine and iterate until perfect
 
-### Calibration System
-- Upload writing samples to improve style matching
+### Writing Samples & Calibration
+- **Smart URL Import**: Paste a URL and AI extracts just the article content (no navigation, footers, ads)
+- **Multiple upload methods**: Paste text, import from URL, or upload .txt/.md files
+- **Automatic analysis**: Samples are analyzed for vocabulary, tone, and style patterns
 - Complete calibration rounds to fine-tune your profile
 - Rate AI-generated samples and provide feedback
 - Profile improves with each interaction
@@ -121,6 +123,7 @@ src/
 │   ├── brand/               # Logo components
 │   ├── voice/               # Voice recorder, visualizer
 │   ├── voice-dna/           # Ouno Core components
+│   ├── samples/             # Writing sample upload/view
 │   ├── session/             # Spark components
 │   ├── content/             # Content display/editing
 │   └── ui/                  # shadcn/ui components
