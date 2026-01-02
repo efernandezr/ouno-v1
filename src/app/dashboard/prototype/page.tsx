@@ -1,19 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { 
-  Mic, 
-  Sparkles, 
-  Calendar, 
-  ChevronRight, 
-  Clock, 
-  FileText, 
+import {
+  Mic,
+  Sparkles,
+  ChevronRight,
+  Clock,
+  FileText,
   MoreHorizontal,
-  Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 // --- Mock Data ---
