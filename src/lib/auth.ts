@@ -37,18 +37,35 @@ export const auth = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     },
   },
+  session: {
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60, // Cache session data for 5 minutes
+    },
+  },
   plugins: [
     customSession(async ({ user: sessionUser, session }) => {
-      // Fetch user role from database to include in session
+      // Check if role is already cached in session (avoids redundant DB queries)
+      if (session.role) {
+        return {
+          user: { ...sessionUser, role: session.role as string },
+          session,
+        };
+      }
+
+      // Only query database if role is not already in session
       const [dbUser] = await db
         .select({ role: user.role })
         .from(user)
         .where(eq(user.id, sessionUser.id))
         .limit(1);
 
+      const role = dbUser?.role ?? "user";
+
+      // Store role in session for future requests (enables caching)
       return {
-        user: { ...sessionUser, role: dbUser?.role ?? "user" },
-        session,
+        user: { ...sessionUser, role },
+        session: { ...session, role },
       };
     }),
   ],
