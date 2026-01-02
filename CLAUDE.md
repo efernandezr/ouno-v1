@@ -61,8 +61,9 @@ The app learns each user's unique "Ouno Core"—their speaking patterns, vocabul
 1. User records voice → transcribed
 2. The Editor analyzes for enthusiasm and key topics
 3. Follow-up questions draw out more depth
-4. Content generated using Ouno Core profile
-5. User can refine/iterate on output
+4. User selects content template (Standard Article, Key Points, or Personal Story)
+5. Content generated using Ouno Core profile + selected template
+6. User can refine/iterate on output via Voice Refine
 
 ### 4. Onboarding Flow
 - `not_started` → `voice_intro` → `follow_ups` → `samples` → `complete`
@@ -124,6 +125,8 @@ src/
 │   │   └── SampleViewDialog.tsx # View full sample content
 │   ├── session/                 # Spark-related components
 │   ├── content/                 # Content display/editing
+│   │   ├── TemplateSelector.tsx # Content format selector (3 templates)
+│   │   └── VoiceRefine.tsx      # Voice-based content refinement
 │   ├── onboarding/              # Onboarding components
 │   └── ui/                      # shadcn/ui components
 ├── lib/
@@ -162,6 +165,7 @@ src/
 - `session_mode`: quick (Thought Stream), guided (Deep Dive)
 - `session_status`: recording, transcribing, analyzing, follow_ups, generating, complete, error
 - `content_status`: draft, final, published
+- `content_template`: blog_post (Standard Article), listicle (Key Points), narrative (Personal Story)
 
 ## Environment Variables
 
