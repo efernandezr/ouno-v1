@@ -51,13 +51,13 @@ export function VoiceRefine({
           throw new Error("Failed to upload audio");
         }
 
-        const { uploadId } = await uploadResponse.json();
+        const { uploadId, url } = await uploadResponse.json();
 
         // Transcribe
         const transcribeResponse = await fetch("/api/voice/transcribe", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ uploadId }),
+          body: JSON.stringify({ uploadId, audioUrl: url }),
         });
 
         if (!transcribeResponse.ok) {
