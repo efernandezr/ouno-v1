@@ -1,6 +1,7 @@
 /**
  * Writing Sample Individual API
  *
+ * GET - Fetch a single writing sample with full content
  * DELETE - Remove a writing sample
  */
 
@@ -14,6 +15,63 @@ import { writingSamples } from "@/lib/schema";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
+}
+
+/**
+ * GET - Fetch a single writing sample with full content
+ */
+export async function GET(_request: Request, { params }: RouteParams) {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "Sample ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Fetch sample with ownership verification
+    const [sample] = await db
+      .select({
+        id: writingSamples.id,
+        sourceType: writingSamples.sourceType,
+        sourceUrl: writingSamples.sourceUrl,
+        fileName: writingSamples.fileName,
+        content: writingSamples.content,
+        wordCount: writingSamples.wordCount,
+        analyzedAt: writingSamples.analyzedAt,
+        createdAt: writingSamples.createdAt,
+      })
+      .from(writingSamples)
+      .where(
+        and(
+          eq(writingSamples.id, id),
+          eq(writingSamples.userId, session.user.id)
+        )
+      );
+
+    if (!sample) {
+      return NextResponse.json(
+        { error: "Sample not found or access denied" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ sample });
+  } catch (error) {
+    console.error("Error fetching sample:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch writing sample" },
+      { status: 500 }
+    );
+  }
 }
 
 /**

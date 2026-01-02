@@ -6,6 +6,7 @@ import {
   ClipboardPaste,
   Loader2,
   Plus,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,10 +44,12 @@ export function SampleUploadDialog({
     setPasteContent,
     urlInput,
     setUrlInput,
+    failedUrl,
     isUploading,
     error,
     handlePasteSubmit,
     handleUrlSubmit,
+    handleFallbackPasteSubmit,
     handleFileChange,
     reset,
     clearError,
@@ -257,6 +260,82 @@ export function SampleUploadDialog({
                   </>
                 ) : (
                   "Import Article"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // URL fallback mode - paste content manually when extraction fails
+  if (mode === "url_fallback") {
+    return (
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              Couldn&apos;t Extract Content
+            </DialogTitle>
+            <DialogDescription>
+              We couldn&apos;t automatically extract content from that URL. Please paste the article text below.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Show the failed URL */}
+            {failedUrl && (
+              <div className="text-sm text-muted-foreground bg-muted/50 px-3 py-2 rounded-md break-all">
+                {failedUrl}
+              </div>
+            )}
+
+            <Textarea
+              placeholder="Paste the article content here..."
+              value={pasteContent}
+              onChange={(e) => setPasteContent(e.target.value)}
+              className="min-h-[180px] max-h-[50vh] resize-none overflow-y-auto [field-sizing:fixed]"
+              autoFocus
+            />
+
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>
+                {pasteContent.split(/\s+/).filter(Boolean).length} words
+              </span>
+              {pasteContent.length < 100 && pasteContent.length > 0 && (
+                <span className="text-destructive">
+                  {100 - pasteContent.length} more characters needed
+                </span>
+              )}
+            </div>
+
+            {error && <p className="text-sm text-destructive">{error}</p>}
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setMode("url");
+                  clearError();
+                }}
+                disabled={isUploading}
+              >
+                Try Different URL
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={handleFallbackPasteSubmit}
+                disabled={isUploading || pasteContent.length < 100}
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  "Add Sample"
                 )}
               </Button>
             </div>

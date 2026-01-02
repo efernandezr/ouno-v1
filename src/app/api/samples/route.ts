@@ -9,12 +9,17 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { eq, desc } from "drizzle-orm";
+import { generateText } from "ai";
+import { openrouter } from "@openrouter/ai-sdk-provider";
 import { rebuildVoiceDNA } from "@/lib/analysis/voiceDNABuilder";
 import { extractWritingPatterns } from "@/lib/analysis/writingSampleAnalyzer";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { writingSamples } from "@/lib/schema";
 import { isValidExternalUrl, VALIDATION_LIMITS } from "@/lib/validation";
+
+// Use a fast/cheap model for article extraction
+const EXTRACTION_MODEL = "openai/gpt-4o-mini";
 
 interface SampleRequest {
   sourceType: "paste" | "url" | "file";
@@ -34,27 +39,18 @@ function countWords(text: string): number {
 }
 
 /**
- * Fetch and extract text content from a URL
- * Includes SSRF protection and size limits
+ * Fetch raw content using Jina.ai Reader API (handles JS-rendered sites)
+ * Returns raw markdown for LLM extraction
  */
-async function fetchUrlContent(url: string): Promise<string> {
-  // Validate URL safety (SSRF protection)
-  const urlValidation = isValidExternalUrl(url);
-  if (!urlValidation.valid) {
-    throw new Error(urlValidation.error || "Invalid URL");
-  }
-
-  // Create abort controller for timeout
+async function fetchWithJinaReader(url: string, timeout: number): Promise<string | null> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(
-    () => controller.abort(),
-    VALIDATION_LIMITS.URL_FETCH_TIMEOUT_MS
-  );
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const response = await fetch(url, {
+    const jinaUrl = `https://r.jina.ai/${url}`;
+    const response = await fetch(jinaUrl, {
       headers: {
-        "User-Agent": "VoiceDNA Bot (content analysis)",
+        Accept: "text/plain",
       },
       signal: controller.signal,
     });
@@ -62,79 +58,191 @@ async function fetchUrlContent(url: string): Promise<string> {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch URL: ${response.status}`);
+      return null;
     }
 
-    // Check content length before downloading
-    const contentLength = response.headers.get("content-length");
-    const maxSize = VALIDATION_LIMITS.URL_FETCH_MAX_SIZE_MB * 1024 * 1024;
-    if (contentLength && parseInt(contentLength, 10) > maxSize) {
-      throw new Error(
-        `Content too large. Maximum size: ${VALIDATION_LIMITS.URL_FETCH_MAX_SIZE_MB}MB`
-      );
-    }
-
-    const html = await response.text();
-
-    // Double-check size after download (for chunked transfers)
-    if (html.length > maxSize) {
-      throw new Error(
-        `Content too large. Maximum size: ${VALIDATION_LIMITS.URL_FETCH_MAX_SIZE_MB}MB`
-      );
-    }
-
-    // Basic HTML to text extraction
-    // Remove script, style, and other non-content tags
-    let text = html
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
-      .replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, "")
-      .replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, "")
-      .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, "")
-      .replace(/<aside\b[^<]*(?:(?!<\/aside>)<[^<]*)*<\/aside>/gi, "");
-
-    // Try to extract main content
-    const mainMatch = text.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
-    const articleMatch = text.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
-
-    if (mainMatch?.[1]) {
-      text = mainMatch[1];
-    } else if (articleMatch?.[1]) {
-      text = articleMatch[1];
-    }
-
-    // Remove remaining HTML tags
-    text = text.replace(/<[^>]+>/g, " ");
-
-    // Clean up whitespace
-    text = text
-      .replace(/&nbsp;/g, " ")
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    if (text.length < 100) {
-      throw new Error(
-        "Could not extract enough content from URL. Please try pasting the text directly."
-      );
-    }
-
-    return text;
-  } catch (error) {
+    const text = await response.text();
+    return text.length > 100 ? text : null;
+  } catch {
     clearTimeout(timeoutId);
-    if (error instanceof Error) {
-      // Handle abort error specifically
-      if (error.name === "AbortError") {
-        throw new Error("Request timed out while fetching URL");
-      }
-      throw error;
-    }
-    throw new Error("Failed to fetch content from URL");
+    return null;
   }
+}
+
+interface ExtractionResult {
+  success: boolean;
+  title?: string;
+  author?: string;
+  articleBody?: string;
+  wordCount?: number;
+  isArticle: boolean;
+  error?: string;
+}
+
+/**
+ * Extract article content using LLM from raw Jina output
+ * Intelligently extracts only the main article body, removing navigation, footers, etc.
+ */
+async function extractArticleWithLLM(rawContent: string, sourceUrl: string): Promise<ExtractionResult> {
+  const EXTRACTION_PROMPT = `You are an article extraction specialist. Given raw web page content, extract ONLY the main article body.
+
+TASK:
+1. Identify if this is an article/blog post (vs landing page, product page, 404, etc.)
+2. Extract ONLY the article body text - no navigation, headers, footers, sidebars, ads, or other articles
+3. Extract the article title and author name if present
+
+RULES:
+- If this is NOT an article (landing page, 404, product page, login wall), set isArticle to false
+- Strip all navigation menus, site headers, footers, cookie notices
+- Remove "Related articles", "You might also like", "Subscribe" sections
+- Remove author bios that appear at the end (but keep the author NAME)
+- Remove comments sections
+- Keep the main article text with natural paragraph breaks
+- Convert ALL markdown to plain text:
+  - Remove **bold** and _italic_ markers (keep the text inside)
+  - Remove > blockquote markers at the start of lines
+  - Remove # header markers
+  - Convert [link text](url) to just the link text
+  - Remove template placeholders like {{variable}} or {{variable | default: "..."}}
+  - Remove code fence markers (\`\`\`) but keep the code content
+  - Remove inline code backticks (\`)
+- Output should be clean, readable prose with no markdown or special formatting characters
+
+Return ONLY valid JSON (no markdown, no explanation):
+{
+  "isArticle": true,
+  "title": "Article title or null if not found",
+  "author": "Author name or null if not found",
+  "articleBody": "The extracted article text with paragraph breaks preserved",
+  "error": null
+}
+
+Or if not an article:
+{
+  "isArticle": false,
+  "title": null,
+  "author": null,
+  "articleBody": null,
+  "error": "Brief explanation of why this is not an article"
+}`;
+
+  try {
+    // Limit input to ~15k chars to stay within token limits
+    const truncatedContent = rawContent.slice(0, 15000);
+
+    const { text } = await generateText({
+      model: openrouter(EXTRACTION_MODEL),
+      system: EXTRACTION_PROMPT,
+      prompt: `URL: ${sourceUrl}\n\nRAW CONTENT:\n${truncatedContent}`,
+      maxOutputTokens: 4000,
+      temperature: 0, // Deterministic extraction
+    });
+
+    // Parse JSON response - find JSON object in response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return {
+        success: false,
+        isArticle: false,
+        error: "Failed to parse extraction response"
+      };
+    }
+
+    const result = JSON.parse(jsonMatch[0]);
+
+    if (!result.isArticle) {
+      return {
+        success: false,
+        isArticle: false,
+        error: result.error || "This URL does not appear to be an article. Please try a different URL or paste the text directly.",
+      };
+    }
+
+    if (!result.articleBody || result.articleBody.length < 100) {
+      return {
+        success: false,
+        isArticle: true,
+        error: "Could not extract enough article content. Try pasting the text directly.",
+      };
+    }
+
+    const wordCount = result.articleBody.trim().split(/\s+/).filter(Boolean).length;
+
+    return {
+      success: true,
+      isArticle: true,
+      title: result.title || undefined,
+      author: result.author || undefined,
+      articleBody: result.articleBody,
+      wordCount,
+    };
+  } catch (error) {
+    console.error("LLM extraction error:", error);
+    return {
+      success: false,
+      isArticle: false,
+      error: error instanceof Error ? error.message : "Extraction failed",
+    };
+  }
+}
+
+interface UrlFetchResult {
+  success: boolean;
+  content?: string;
+  title?: string;
+  author?: string;
+  wordCount?: number;
+  extractionFailed?: boolean;
+  errorMessage?: string;
+}
+
+/**
+ * Fetch and extract article content from a URL
+ * Uses Jina.ai for fetching (handles JS-rendered sites), then LLM for intelligent extraction
+ * Returns extraction result with success/failure info for paste fallback
+ */
+async function fetchUrlContent(url: string): Promise<UrlFetchResult> {
+  // Validate URL safety (SSRF protection)
+  const urlValidation = isValidExternalUrl(url);
+  if (!urlValidation.valid) {
+    return {
+      success: false,
+      extractionFailed: true,
+      errorMessage: urlValidation.error || "Invalid URL",
+    };
+  }
+
+  const timeout = VALIDATION_LIMITS.URL_FETCH_TIMEOUT_MS;
+
+  // Fetch raw content via Jina (handles JS rendering)
+  const rawContent = await fetchWithJinaReader(url, timeout);
+
+  if (!rawContent) {
+    return {
+      success: false,
+      extractionFailed: true,
+      errorMessage: "Could not fetch content from this URL. The site may be blocking access or require login.",
+    };
+  }
+
+  // Use LLM to intelligently extract just the article body
+  const extraction = await extractArticleWithLLM(rawContent, url);
+
+  if (!extraction.success || !extraction.articleBody) {
+    return {
+      success: false,
+      extractionFailed: true,
+      errorMessage: extraction.error || "Could not extract article content.",
+    };
+  }
+
+  return {
+    success: true,
+    content: extraction.articleBody,
+    ...(extraction.title && { title: extraction.title }),
+    ...(extraction.author && { author: extraction.author }),
+    ...(extraction.wordCount && { wordCount: extraction.wordCount }),
+  };
 }
 
 /**
@@ -230,14 +338,31 @@ export async function POST(request: Request) {
 
     // Get content based on source type
     let sampleContent: string;
+    let extractedWordCount: number | undefined;
 
     if (sourceType === "url") {
-      sampleContent = await fetchUrlContent(sourceUrl!);
+      const urlResult = await fetchUrlContent(sourceUrl!);
+
+      // If extraction failed, return 422 to trigger paste fallback UI
+      if (!urlResult.success || !urlResult.content) {
+        return NextResponse.json(
+          {
+            success: false,
+            extractionFailed: true,
+            error: urlResult.errorMessage || "Could not extract article content.",
+            sourceUrl: sourceUrl,
+          },
+          { status: 422 }
+        );
+      }
+
+      sampleContent = urlResult.content;
+      extractedWordCount = urlResult.wordCount;
     } else {
       sampleContent = content!;
     }
 
-    const wordCount = countWords(sampleContent);
+    const wordCount = extractedWordCount || countWords(sampleContent);
 
     // Validate minimum word count
     if (wordCount < 50) {

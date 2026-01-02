@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 
-export type UploadMode = "select" | "paste" | "url" | "file";
+export type UploadMode = "select" | "paste" | "url" | "url_fallback" | "file";
 
 export interface UploadedSample {
   id: string;
@@ -21,6 +21,7 @@ interface UseSampleUploadReturn {
   mode: UploadMode;
   pasteContent: string;
   urlInput: string;
+  failedUrl: string | null;
   isUploading: boolean;
   error: string | null;
 
@@ -32,6 +33,7 @@ interface UseSampleUploadReturn {
   // Actions
   handlePasteSubmit: () => Promise<UploadedSample | null>;
   handleUrlSubmit: () => Promise<UploadedSample | null>;
+  handleFallbackPasteSubmit: () => Promise<UploadedSample | null>;
   handleFileChange: (event: React.ChangeEvent<HTMLInputElement>) => Promise<UploadedSample | null>;
   reset: () => void;
   clearError: () => void;
@@ -47,6 +49,7 @@ export function useSampleUpload(options?: UseSampleUploadOptions): UseSampleUplo
   const [mode, setMode] = useState<UploadMode>("select");
   const [pasteContent, setPasteContent] = useState("");
   const [urlInput, setUrlInput] = useState("");
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,6 +59,7 @@ export function useSampleUpload(options?: UseSampleUploadOptions): UseSampleUplo
     setMode("select");
     setPasteContent("");
     setUrlInput("");
+    setFailedUrl(null);
     setError(null);
     setIsUploading(false);
   }, []);
@@ -135,12 +139,21 @@ export function useSampleUpload(options?: UseSampleUploadOptions): UseSampleUplo
         }),
       });
 
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "Failed to fetch article");
+      const result = await response.json();
+
+      // Handle extraction failure - switch to paste fallback mode
+      if (response.status === 422 && result.extractionFailed) {
+        setFailedUrl(urlInput.trim());
+        setUrlInput("");
+        setPasteContent("");
+        setMode("url_fallback");
+        setIsUploading(false);
+        return null;
       }
 
-      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to fetch article");
+      }
 
       const sample: UploadedSample = {
         id: result.sampleId,
@@ -163,6 +176,57 @@ export function useSampleUpload(options?: UseSampleUploadOptions): UseSampleUplo
       setIsUploading(false);
     }
   }, [urlInput, options]);
+
+  const handleFallbackPasteSubmit = useCallback(async (): Promise<UploadedSample | null> => {
+    if (!pasteContent.trim() || pasteContent.trim().length < 100) {
+      setError("Please enter at least 100 characters of content.");
+      return null;
+    }
+
+    setIsUploading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/samples", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sourceType: "paste",
+          content: pasteContent.trim(),
+          // Include the original URL for reference (stored in fileName field)
+          fileName: failedUrl ? `From: ${failedUrl}` : undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Failed to upload sample");
+      }
+
+      const result = await response.json();
+
+      const sample: UploadedSample = {
+        id: result.sampleId,
+        sourceType: "paste",
+        preview: pasteContent.slice(0, 100) + "...",
+        wordCount: result.wordCount,
+      };
+
+      setPasteContent("");
+      setFailedUrl(null);
+      setMode("select");
+      options?.onSuccess?.(sample);
+
+      return sample;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      setError(message);
+      options?.onError?.(message);
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  }, [pasteContent, failedUrl, options]);
 
   const handleFileChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>): Promise<UploadedSample | null> => {
@@ -237,6 +301,7 @@ export function useSampleUpload(options?: UseSampleUploadOptions): UseSampleUplo
     mode,
     pasteContent,
     urlInput,
+    failedUrl,
     isUploading,
     error,
 
@@ -248,6 +313,7 @@ export function useSampleUpload(options?: UseSampleUploadOptions): UseSampleUplo
     // Actions
     handlePasteSubmit,
     handleUrlSubmit,
+    handleFallbackPasteSubmit,
     handleFileChange,
     reset,
     clearError,

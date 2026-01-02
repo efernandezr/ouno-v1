@@ -7,6 +7,7 @@ import {
   FileText,
   Trash2,
   Loader2,
+  Eye,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -21,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SampleViewDialog } from "./SampleViewDialog";
 
 export interface Sample {
   id: string;
@@ -30,6 +32,16 @@ export interface Sample {
   preview: string;
   wordCount: number;
   analyzedAt?: Date | string | null;
+  createdAt: Date | string;
+}
+
+interface FullSample {
+  id: string;
+  sourceType: "paste" | "url" | "file";
+  sourceUrl?: string | null;
+  fileName?: string | null;
+  content: string;
+  wordCount: number;
   createdAt: Date | string;
 }
 
@@ -67,8 +79,31 @@ function formatDate(date: Date | string): string {
 export function SampleCard({ sample, onDelete }: SampleCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [fullSample, setFullSample] = useState<FullSample | null>(null);
+  const [isLoadingContent, setIsLoadingContent] = useState(false);
 
   const Icon = sourceTypeIcons[sample.sourceType];
+
+  const handleView = async () => {
+    setViewDialogOpen(true);
+
+    // Only fetch if we don't have the content yet
+    if (fullSample?.id === sample.id) return;
+
+    setIsLoadingContent(true);
+    try {
+      const response = await fetch(`/api/samples/${sample.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setFullSample(data.sample);
+      }
+    } catch (error) {
+      console.error("Failed to fetch sample content:", error);
+    } finally {
+      setIsLoadingContent(false);
+    }
+  };
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -113,6 +148,21 @@ export function SampleCard({ sample, onDelete }: SampleCardProps) {
         </div>
       </div>
 
+      {/* View button */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="flex-shrink-0 text-muted-foreground hover:text-primary"
+        onClick={handleView}
+        disabled={isLoadingContent}
+      >
+        {isLoadingContent ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Eye className="h-4 w-4" />
+        )}
+      </Button>
+
       {/* Delete button */}
       <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AlertDialogTrigger asChild>
@@ -156,6 +206,13 @@ export function SampleCard({ sample, onDelete }: SampleCardProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* View dialog */}
+      <SampleViewDialog
+        open={viewDialogOpen}
+        onOpenChange={setViewDialogOpen}
+        sample={fullSample}
+      />
     </div>
   );
 }
