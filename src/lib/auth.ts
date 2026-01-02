@@ -45,11 +45,14 @@ export const auth = betterAuth({
   },
   plugins: [
     customSession(async ({ user: sessionUser, session }) => {
+      // Type assertion for session with extended properties
+      const extendedSession = session as typeof session & { role?: string };
+
       // Check if role is already cached in session (avoids redundant DB queries)
-      if (session.role) {
+      if (extendedSession.role) {
         return {
-          user: { ...sessionUser, role: session.role as string },
-          session,
+          user: { ...sessionUser, role: extendedSession.role },
+          session: extendedSession,
         };
       }
 
@@ -65,7 +68,7 @@ export const auth = betterAuth({
       // Store role in session for future requests (enables caching)
       return {
         user: { ...sessionUser, role },
-        session: { ...session, role },
+        session: { ...extendedSession, role },
       };
     }),
   ],
