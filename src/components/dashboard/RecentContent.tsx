@@ -28,13 +28,13 @@ export function RecentContent() {
     data: content = [],
     isLoading: loading,
     error,
-  } = useQuery({
+  } = useQuery<ContentItem[]>({
     queryKey: ["content", "recent"],
     queryFn: async () => {
       const response = await fetch("/api/content?limit=5");
       if (!response.ok) throw new Error("Failed to fetch content");
       const data = await response.json();
-      return data.content || [];
+      return (data.content || []) as ContentItem[];
     },
   });
 
