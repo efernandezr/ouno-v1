@@ -7,9 +7,9 @@
  * The profile improves with each voice session through weighted merging.
  */
 
-import { eq } from "drizzle-orm";
+import { eq, avg } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { voiceDNAProfiles, writingSamples } from "@/lib/schema";
+import { voiceDNAProfiles, writingSamples, calibrationRounds } from "@/lib/schema";
 import type { EnthusiasmAnalysis } from "@/types/session";
 import type { WordTimestamp } from "@/types/voice";
 import type { VoiceDNA, SpokenPatterns, TonalAttributes, WrittenPatterns, ExtractedWritingPatterns } from "@/types/voiceDNA";
@@ -37,37 +37,47 @@ interface BuildVoiceDNAResult {
 /**
  * Calculate calibration score based on amount of data collected
  *
- * Score increases with:
- * - Number of voice sessions analyzed
- * - Number of writing samples
- * - Calibration rounds completed
- * - Diversity of detected patterns
+ * Point allocation (totals 100):
+ * - Voice sessions: up to 35 points
+ * - Writing samples: up to 15 points
+ * - Calibration rounds: up to 25 points (weighted by rating)
+ * - Pattern richness (spoken): up to 10 points
+ * - Written patterns: up to 8 points
+ * - Learned rules: up to 5 points
+ * - Quality bonus: up to 2 points
+ *
+ * Minimum thresholds prevent gaming:
+ * - Score capped at 69 unless voiceSessions >= 3 AND (writingSamples >= 1 OR calibrationRounds >= 2)
  */
 function calculateCalibrationScore(
   voiceSessionsAnalyzed: number,
   writingSamplesAnalyzed: number,
   calibrationRoundsCompleted: number,
-  voiceDNA: VoiceDNA
+  voiceDNA: VoiceDNA,
+  averageCalibrationRating: number = 3 // Default to middle rating
 ): number {
   let score = 0;
 
-  // Voice sessions contribution (up to 40 points)
-  // First session = 15 points, subsequent sessions add diminishing returns
-  if (voiceSessionsAnalyzed >= 1) score += 15;
-  if (voiceSessionsAnalyzed >= 2) score += 10;
-  if (voiceSessionsAnalyzed >= 3) score += 8;
+  // Voice sessions contribution (up to 35 points, reduced from 40)
+  // First session = 12 points, subsequent sessions add diminishing returns
+  if (voiceSessionsAnalyzed >= 1) score += 12;
+  if (voiceSessionsAnalyzed >= 2) score += 9;
+  if (voiceSessionsAnalyzed >= 3) score += 7;
   if (voiceSessionsAnalyzed >= 5) score += 5;
   if (voiceSessionsAnalyzed >= 10) score += 2;
 
-  // Writing samples contribution (up to 20 points)
-  if (writingSamplesAnalyzed >= 1) score += 10;
-  if (writingSamplesAnalyzed >= 2) score += 5;
-  if (writingSamplesAnalyzed >= 3) score += 5;
+  // Writing samples contribution (up to 15 points, reduced from 20)
+  if (writingSamplesAnalyzed >= 1) score += 8;
+  if (writingSamplesAnalyzed >= 2) score += 4;
+  if (writingSamplesAnalyzed >= 3) score += 3;
 
-  // Calibration rounds contribution (up to 30 points)
-  score += Math.min(calibrationRoundsCompleted * 10, 30);
+  // Calibration rounds contribution (up to 25 points, reduced from 30)
+  // Weighted by average rating: base 6 pts + up to 2 pts bonus for high ratings
+  const ratingBonus = averageCalibrationRating >= 4 ? 2 : averageCalibrationRating >= 3 ? 1 : 0;
+  const pointsPerRound = 6 + ratingBonus;
+  score += Math.min(calibrationRoundsCompleted * pointsPerRound, 25);
 
-  // Pattern richness contribution (up to 10 points)
+  // Pattern richness contribution - spoken (up to 10 points)
   if (voiceDNA.spokenPatterns) {
     const sp = voiceDNA.spokenPatterns;
     if (sp.vocabulary.frequentWords.length >= 5) score += 2;
@@ -85,6 +95,43 @@ function calculateCalibrationScore(
       Math.abs(ta.directness - 0.5) +
       Math.abs(ta.empathy - 0.5);
     if (variance > 1) score += 2;
+  }
+
+  // Written patterns contribution (up to 8 points) - NEW
+  if (voiceDNA.writtenPatterns) {
+    const wp = voiceDNA.writtenPatterns;
+    // Base points for having written patterns
+    score += 5;
+    // Additional points for distinct preferences
+    if (wp.structurePreference !== "linear") score += 1;
+    if (wp.openingStyle !== "context") score += 1;
+    if (wp.closingStyle !== "summary") score += 1;
+  }
+
+  // Learned rules contribution (up to 5 points) - NEW
+  if (voiceDNA.learnedRules && voiceDNA.learnedRules.length > 0) {
+    const rules = voiceDNA.learnedRules;
+    // 1 point per rule, max 3
+    score += Math.min(rules.length, 3);
+    // +2 bonus if average confidence > 0.7
+    const avgConfidence = rules.reduce((sum, r) => sum + r.confidence, 0) / rules.length;
+    if (avgConfidence > 0.7) score += 2;
+  }
+
+  // Quality bonus (up to 2 points) - NEW
+  // Awarded for having both voice AND writing data
+  if (voiceSessionsAnalyzed >= 2 && writingSamplesAnalyzed >= 1) {
+    score += 2;
+  }
+
+  // Apply minimum thresholds to prevent gaming
+  const meetsHighThreshold =
+    voiceSessionsAnalyzed >= 3 &&
+    (writingSamplesAnalyzed >= 1 || calibrationRoundsCompleted >= 2);
+
+  // Cap at 69 ("medium") if minimum data requirements not met
+  if (score >= 70 && !meetsHighThreshold) {
+    score = 69;
   }
 
   return Math.min(score, 100);
@@ -269,7 +316,10 @@ export async function buildVoiceDNA(
     isNewProfile ? 1.0 : 0.3
   );
 
-  // Step 5: Calculate new calibration score
+  // Step 5: Get average calibration rating
+  const avgRating = await getAverageCalibrationRating(userId);
+
+  // Step 6: Calculate new calibration score
   const newVoiceSessionsAnalyzed = existingData.voiceSessionsAnalyzed + 1;
   const newVoiceDNA: VoiceDNA = {
     spokenPatterns: mergedSpokenPatterns,
@@ -284,12 +334,13 @@ export async function buildVoiceDNA(
     newVoiceSessionsAnalyzed,
     existingData.writingSamplesAnalyzed,
     existingData.calibrationRoundsCompleted,
-    newVoiceDNA
+    newVoiceDNA,
+    avgRating
   );
 
   newVoiceDNA.calibrationScore = newCalibrationScore;
 
-  // Step 6: Persist to database
+  // Step 7: Persist to database
   if (isNewProfile) {
     await db.insert(voiceDNAProfiles).values({
       userId,
@@ -627,7 +678,10 @@ export async function rebuildVoiceDNA(userId: string): Promise<{
     writtenPatterns = convertToWrittenPatterns(mergedExtracted);
   }
 
-  // Step 4: Calculate new calibration score
+  // Step 4: Get average calibration rating
+  const avgRating = await getAverageCalibrationRating(userId);
+
+  // Step 5: Calculate new calibration score
   const newVoiceDNA: VoiceDNA = {
     spokenPatterns: existingData.profile?.spokenPatterns || null,
     writtenPatterns,
@@ -641,12 +695,13 @@ export async function rebuildVoiceDNA(userId: string): Promise<{
     existingData.voiceSessionsAnalyzed,
     writingSamplesCount,
     existingData.calibrationRoundsCompleted,
-    newVoiceDNA
+    newVoiceDNA,
+    avgRating
   );
 
   newVoiceDNA.calibrationScore = newCalibrationScore;
 
-  // Step 5: Update the database
+  // Step 6: Update the database
   if (!existingData.profile) {
     // Create new profile if none exists
     await db.insert(voiceDNAProfiles).values({
@@ -681,4 +736,71 @@ export async function rebuildVoiceDNA(userId: string): Promise<{
     calibrationRoundsCompleted: existingData.calibrationRoundsCompleted,
     calibrationScore: newCalibrationScore,
   };
+}
+
+/**
+ * Get the average calibration rating for a user
+ *
+ * Fetches all calibration rounds with ratings and returns the average.
+ * Returns 3 (middle value) if no ratings exist.
+ */
+async function getAverageCalibrationRating(userId: string): Promise<number> {
+  const result = await db
+    .select({ avgRating: avg(calibrationRounds.rating) })
+    .from(calibrationRounds)
+    .where(eq(calibrationRounds.userId, userId));
+
+  const avgRating = result[0]?.avgRating;
+  // avg() returns string | null, convert to number with fallback
+  return avgRating ? parseFloat(avgRating) : 3;
+}
+
+/**
+ * Recalculate calibration score for a user
+ *
+ * This is the canonical function for updating calibration scores.
+ * It fetches all relevant data (profile, writing samples, calibration ratings)
+ * and calculates a comprehensive score using all data sources.
+ *
+ * Call this after:
+ * - Completing a calibration round
+ * - Adding/removing writing samples
+ * - Any operation that should update the calibration score
+ */
+export async function recalculateCalibrationScore(userId: string): Promise<number> {
+  // Step 1: Get existing profile data
+  const existingData = await getVoiceDNAProfile(userId);
+
+  // Step 2: Fetch average calibration rating
+  const avgRating = await getAverageCalibrationRating(userId);
+
+  // Step 3: Build current VoiceDNA for scoring
+  const currentVoiceDNA: VoiceDNA = {
+    spokenPatterns: existingData.profile?.spokenPatterns || null,
+    writtenPatterns: existingData.profile?.writtenPatterns || null,
+    tonalAttributes: existingData.profile?.tonalAttributes || null,
+    referentInfluences: existingData.profile?.referentInfluences || null,
+    learnedRules: existingData.profile?.learnedRules || [],
+    calibrationScore: 0,
+  };
+
+  // Step 4: Calculate new score with all data sources
+  const newScore = calculateCalibrationScore(
+    existingData.voiceSessionsAnalyzed,
+    existingData.writingSamplesAnalyzed,
+    existingData.calibrationRoundsCompleted,
+    currentVoiceDNA,
+    avgRating
+  );
+
+  // Step 5: Update the database
+  await db
+    .update(voiceDNAProfiles)
+    .set({
+      calibrationScore: newScore,
+      updatedAt: new Date(),
+    })
+    .where(eq(voiceDNAProfiles.userId, userId));
+
+  return newScore;
 }

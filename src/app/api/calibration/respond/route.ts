@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import { openrouter } from "@openrouter/ai-sdk-provider";
 import { generateText } from "ai";
 import { eq, and } from "drizzle-orm";
+import { recalculateCalibrationScore } from "@/lib/analysis/voiceDNABuilder";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { calibrationRounds, voiceDNAProfiles } from "@/lib/schema";
@@ -183,15 +184,18 @@ export async function PATCH(request: Request) {
       })
       .where(eq(calibrationRounds.id, round.id));
 
-    // Update Voice DNA profile calibration stats
+    // Update Voice DNA profile calibration stats using canonical calculation
+    // First update the round count, then recalculate the full score
     await db
       .update(voiceDNAProfiles)
       .set({
         calibrationRoundsCompleted: roundNumber,
-        calibrationScore: Math.min(100, roundNumber * 20 + rating * 4),
         updatedAt: new Date(),
       })
       .where(eq(voiceDNAProfiles.userId, session.user.id));
+
+    // Recalculate score using all data sources (voice sessions, writing samples, calibration, patterns)
+    await recalculateCalibrationScore(session.user.id);
 
     return NextResponse.json({
       success: true,
