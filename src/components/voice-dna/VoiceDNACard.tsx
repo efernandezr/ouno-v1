@@ -228,23 +228,9 @@ export function VoiceDNACard({
   return (
     <Card className={cn("", className)}>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Mic className="h-5 w-5 text-primary" />
-            <CardTitle>Ouno Core Profile</CardTitle>
-          </div>
-          <Badge
-            variant={
-              summary?.calibrationLevel === "high"
-                ? "default"
-                : summary?.calibrationLevel === "medium"
-                  ? "secondary"
-                  : "outline"
-            }
-            className="text-sm"
-          >
-            {voiceDNA.calibrationScore}% Calibrated
-          </Badge>
+        <div className="flex items-center gap-2">
+          <Mic className="h-5 w-5 text-primary" />
+          <CardTitle>Ouno Core Profile</CardTitle>
         </div>
         <CardDescription>
           Your unique voice fingerprint that powers content generation

@@ -127,10 +127,17 @@ export function CalibrationFlow({
         });
 
         if (!response.ok) {
-          throw new Error("Failed to generate sample");
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || "Failed to generate sample");
         }
 
         const data = await response.json();
+
+        // Validate that we got actual content
+        if (!data.generatedSample || data.generatedSample.trim() === "") {
+          throw new Error("Generated content was empty. Please try again.");
+        }
+
         setRoundData((prev) => ({
           ...prev,
           userResponse,
@@ -163,20 +170,22 @@ export function CalibrationFlow({
         });
 
         if (!uploadResponse.ok) {
-          throw new Error("Failed to upload recording");
+          const errorData = await uploadResponse.json().catch(() => ({}));
+          throw new Error(errorData.error || "Failed to upload recording");
         }
 
-        const { url } = await uploadResponse.json();
+        const { uploadId, url } = await uploadResponse.json();
 
         // Transcribe
         const transcribeResponse = await fetch("/api/voice/transcribe", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ audioUrl: url }),
+          body: JSON.stringify({ uploadId, audioUrl: url }),
         });
 
         if (!transcribeResponse.ok) {
-          throw new Error("Failed to transcribe recording");
+          const errorData = await transcribeResponse.json().catch(() => ({}));
+          throw new Error(errorData.error || "Failed to transcribe recording");
         }
 
         const { transcript } = await transcribeResponse.json();
