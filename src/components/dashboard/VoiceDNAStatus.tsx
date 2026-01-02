@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Mic, Sparkles, ChevronRight, Settings, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -24,37 +24,31 @@ interface VoiceDNAStats {
  *
  * Dashboard widget showing Ouno Core calibration status
  * with quick stats and CTA for improvement.
+ * Uses React Query for automatic caching and background refetching.
  */
 export function VoiceDNAStatus() {
-  const [stats, setStats] = useState<VoiceDNAStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: stats,
+    isLoading: loading,
+    error,
+  } = useQuery({
+    queryKey: ["voice-dna", "stats"],
+    queryFn: async () => {
+      const response = await fetch("/api/voice-dna");
+      if (!response.ok) throw new Error("Failed to fetch Ouno Core");
 
-  useEffect(() => {
-    async function fetchStats() {
-      try {
-        const response = await fetch("/api/voice-dna");
-        if (!response.ok) throw new Error("Failed to fetch Ouno Core");
-
-        const data = await response.json();
-        setStats({
-          hasProfile: data.hasProfile,
-          calibrationScore: data.stats?.calibrationScore ?? 0,
-          voiceSessionsAnalyzed: data.stats?.voiceSessionsAnalyzed ?? 0,
-          writingSamplesAnalyzed: data.stats?.writingSamplesAnalyzed ?? 0,
-          calibrationRoundsCompleted: data.stats?.calibrationRoundsCompleted ?? 0,
-          calibrationLevel: data.summary?.calibrationLevel ?? "low",
-          strengths: data.summary?.strengths ?? [],
-        });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchStats();
-  }, []);
+      const data = await response.json();
+      return {
+        hasProfile: data.hasProfile,
+        calibrationScore: data.stats?.calibrationScore ?? 0,
+        voiceSessionsAnalyzed: data.stats?.voiceSessionsAnalyzed ?? 0,
+        writingSamplesAnalyzed: data.stats?.writingSamplesAnalyzed ?? 0,
+        calibrationRoundsCompleted: data.stats?.calibrationRoundsCompleted ?? 0,
+        calibrationLevel: data.summary?.calibrationLevel ?? "low",
+        strengths: data.summary?.strengths ?? [],
+      } as VoiceDNAStats;
+    },
+  });
 
   if (loading) {
     return (

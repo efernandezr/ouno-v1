@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
   Lock,
@@ -33,10 +34,7 @@ import type { ReferentInfluences, VoiceDNA } from "@/types/voiceDNA";
 export default function ReferentSettingsPage() {
   const { data: session, isPending: sessionPending } = useSession();
   const router = useRouter();
-  const [voiceDNA, setVoiceDNA] = useState<VoiceDNA | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   // Selection state
   const [selectedReferents, setSelectedReferents] = useState<ReferentWithSelection[]>([]);
@@ -44,28 +42,22 @@ export default function ReferentSettingsPage() {
   const [hasChanges, setHasChanges] = useState(false);
 
   // Fetch current Voice DNA to get existing referent selections
-  const fetchVoiceDNA = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const {
+    data: voiceDNA,
+    isLoading: loading,
+    error,
+  } = useQuery({
+    queryKey: ["voice-dna", "referents"],
+    queryFn: async () => {
       const response = await fetch("/api/voice-dna");
       if (!response.ok) {
         throw new Error("Failed to fetch Voice DNA");
       }
       const result = await response.json();
-      setVoiceDNA(result.voiceDNA);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (session) {
-      fetchVoiceDNA();
-    }
-  }, [session, fetchVoiceDNA]);
+      return result.voiceDNA as VoiceDNA | null;
+    },
+    enabled: !!session,
+  });
 
   // Handle referent selection changes
   const handleReferentChange = useCallback((referents: ReferentWithSelection[]) => {
@@ -85,10 +77,9 @@ export default function ReferentSettingsPage() {
     setHasChanges(true);
   }, []);
 
-  // Save changes
-  const handleSave = async () => {
-    setSaving(true);
-    try {
+  // Save changes mutation
+  const saveMutation = useMutation({
+    mutationFn: async () => {
       const selected = selectedReferents.filter((r) => r.selected);
       const totalReferentWeight = selected.reduce((sum, r) => sum + r.weight, 0);
       const userWeight = 100 - totalReferentWeight;
@@ -113,13 +104,20 @@ export default function ReferentSettingsPage() {
         throw new Error("Failed to save referent preferences");
       }
 
+      return response.json();
+    },
+    onSuccess: () => {
       toast.success("Style influences saved successfully");
       setHasChanges(false);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save");
-    } finally {
-      setSaving(false);
-    }
+      queryClient.invalidateQueries({ queryKey: ["voice-dna"] });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Failed to save");
+    },
+  });
+
+  const handleSave = () => {
+    saveMutation.mutate();
   };
 
   if (sessionPending) {
@@ -174,8 +172,8 @@ export default function ReferentSettingsPage() {
               </p>
             </div>
             {hasChanges && (
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? (
+              <Button onClick={handleSave} disabled={saveMutation.isPending}>
+                {saveMutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Saving...
@@ -198,11 +196,10 @@ export default function ReferentSettingsPage() {
               <AlertCircle className="h-5 w-5 text-destructive" />
               <div>
                 <p className="font-medium">Failed to load settings</p>
-                <p className="text-sm text-muted-foreground">{error}</p>
+                <p className="text-sm text-muted-foreground">
+                  {error instanceof Error ? error.message : "An error occurred"}
+                </p>
               </div>
-              <Button variant="outline" size="sm" onClick={fetchVoiceDNA}>
-                Retry
-              </Button>
             </CardContent>
           </Card>
         )}
@@ -263,9 +260,9 @@ export default function ReferentSettingsPage() {
                     <Button
                       className="flex-1"
                       onClick={handleSave}
-                      disabled={saving}
+                      disabled={saveMutation.isPending}
                     >
-                      {saving ? (
+                      {saveMutation.isPending ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           Saving...
