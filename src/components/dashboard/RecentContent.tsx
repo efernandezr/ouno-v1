@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { FileText, Clock, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,29 +21,22 @@ interface ContentItem {
  *
  * Displays the user's most recent generated content.
  * Shows up to 5 items on dashboard with link to full library.
+ * Uses React Query for automatic caching and background refetching.
  */
 export function RecentContent() {
-  const [content, setContent] = useState<ContentItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchContent() {
-      try {
-        const response = await fetch("/api/content?limit=5");
-        if (!response.ok) throw new Error("Failed to fetch content");
-
-        const data = await response.json();
-        setContent(data.content || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchContent();
-  }, []);
+  const {
+    data: content = [],
+    isLoading: loading,
+    error,
+  } = useQuery<ContentItem[]>({
+    queryKey: ["content", "recent"],
+    queryFn: async () => {
+      const response = await fetch("/api/content?limit=5");
+      if (!response.ok) throw new Error("Failed to fetch content");
+      const data = await response.json();
+      return (data.content || []) as ContentItem[];
+    },
+  });
 
   if (loading) {
     return (
@@ -65,7 +58,7 @@ export function RecentContent() {
       <div className="space-y-4">
         <h2 className="text-lg font-semibold">Recent Content</h2>
         <div className="p-4 rounded-lg border border-destructive/20 bg-destructive/5 text-sm text-destructive">
-          {error}
+          {error instanceof Error ? error.message : "Failed to load"}
         </div>
       </div>
     );

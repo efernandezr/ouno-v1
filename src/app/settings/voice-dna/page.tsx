@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Lock,
   Mic,
@@ -25,7 +26,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalibrationFlow } from "@/components/voice-dna/CalibrationFlow";
 import { StrengthIndicator } from "@/components/voice-dna/StrengthIndicator";
-import { useSession } from "@/lib/auth-client";
+import { VoiceDNACard } from "@/components/voice-dna/VoiceDNACard";
+import { useSessionContext } from "@/contexts/session-context";
 import type { VoiceDNA, LearnedRule } from "@/types/voiceDNA";
 
 interface VoiceDNAResponse {
@@ -45,55 +47,45 @@ interface VoiceDNAResponse {
 }
 
 export default function VoiceDNASettingsPage() {
-  const { data: session, isPending: sessionPending } = useSession();
+  const { data: session, isPending: sessionPending } = useSessionContext();
   const router = useRouter();
-  const [data, setData] = useState<VoiceDNAResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [rebuilding, setRebuilding] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [showCalibration, setShowCalibration] = useState(false);
 
-  const fetchVoiceDNA = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  // Fetch Voice DNA profile with React Query
+  const {
+    data,
+    isLoading: loading,
+    error,
+    refetch: fetchVoiceDNA,
+  } = useQuery({
+    queryKey: ["voice-dna", "full"],
+    queryFn: async () => {
       const response = await fetch("/api/voice-dna");
       if (!response.ok) {
         throw new Error("Failed to fetch Ouno Core profile");
       }
-      const result = await response.json();
-      setData(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return response.json() as Promise<VoiceDNAResponse>;
+    },
+    enabled: !!session,
+  });
 
-  const rebuildVoiceDNA = useCallback(async () => {
-    try {
-      setRebuilding(true);
-      setError(null);
+  // Rebuild Voice DNA mutation
+  const rebuildMutation = useMutation({
+    mutationFn: async () => {
       const response = await fetch("/api/voice-dna/rebuild", {
         method: "POST",
       });
       if (!response.ok) {
         throw new Error("Failed to rebuild Ouno Core profile");
       }
-      const result = await response.json();
-      setData(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setRebuilding(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (session) {
-      fetchVoiceDNA();
-    }
-  }, [session, fetchVoiceDNA]);
+      return response.json() as Promise<VoiceDNAResponse>;
+    },
+    onSuccess: () => {
+      // Invalidate and refetch voice DNA data
+      queryClient.invalidateQueries({ queryKey: ["voice-dna"] });
+    },
+  });
 
   if (sessionPending) {
     return (
@@ -147,13 +139,13 @@ export default function VoiceDNASettingsPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={rebuildVoiceDNA}
-              disabled={loading || rebuilding}
+              onClick={() => rebuildMutation.mutate()}
+              disabled={loading || rebuildMutation.isPending}
             >
               <RefreshCw
-                className={`h-4 w-4 mr-2 ${rebuilding ? "animate-spin" : ""}`}
+                className={`h-4 w-4 mr-2 ${rebuildMutation.isPending ? "animate-spin" : ""}`}
               />
-              {rebuilding ? "Rebuilding..." : "Rebuild"}
+              {rebuildMutation.isPending ? "Rebuilding..." : "Rebuild"}
             </Button>
           </div>
         </div>
@@ -165,9 +157,11 @@ export default function VoiceDNASettingsPage() {
               <AlertCircle className="h-5 w-5 text-destructive" />
               <div>
                 <p className="font-medium">Failed to load Ouno Core</p>
-                <p className="text-sm text-muted-foreground">{error}</p>
+                <p className="text-sm text-muted-foreground">
+                  {error instanceof Error ? error.message : "An error occurred"}
+                </p>
               </div>
-              <Button variant="outline" size="sm" onClick={fetchVoiceDNA}>
+              <Button variant="outline" size="sm" onClick={() => fetchVoiceDNA()}>
                 Retry
               </Button>
             </CardContent>
@@ -279,7 +273,7 @@ export default function VoiceDNASettingsPage() {
                     totalRounds={3}
                     onComplete={() => {
                       setShowCalibration(false);
-                      rebuildVoiceDNA();
+                      rebuildMutation.mutate();
                     }}
                   />
                 </CardContent>
@@ -309,7 +303,7 @@ export default function VoiceDNASettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <WritingSamplesSection onSamplesChange={fetchVoiceDNA} />
+                <WritingSamplesSection onSamplesChange={() => fetchVoiceDNA()} />
               </CardContent>
             </Card>
 

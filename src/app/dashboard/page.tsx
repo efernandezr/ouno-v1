@@ -7,10 +7,10 @@ import {
   RecentContent,
   VoiceDNAStatus,
 } from "@/components/dashboard";
-import { useSession } from "@/lib/auth-client";
+import { useSessionContext } from "@/contexts/session-context";
 
 export default function DashboardPage() {
-  const { data: session, isPending } = useSession();
+  const { data: session, isPending } = useSessionContext();
 
   if (isPending) {
     return (

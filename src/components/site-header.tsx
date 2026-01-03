@@ -4,11 +4,11 @@ import Link from "next/link";
 import { AdminBadge } from "@/components/auth/AdminBadge";
 import { UserProfile } from "@/components/auth/user-profile";
 import { OunoLogo } from "@/components/brand/OunoLogo";
-import { useSession } from "@/lib/auth-client";
+import { useSessionContext } from "@/contexts/session-context";
 import { ModeToggle } from "./ui/mode-toggle";
 
 export function SiteHeader() {
-  const { data: session } = useSession();
+  const { data: session } = useSessionContext();
 
   // Link to dashboard if logged in, otherwise to landing page
   const logoHref = session?.user ? "/dashboard" : "/";

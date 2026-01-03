@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "@/lib/auth-client";
+import { useSessionContext } from "@/contexts/session-context";
 import type { UserRole } from "@/lib/roles";
 
 /**
@@ -8,7 +8,7 @@ import type { UserRole } from "@/lib/roles";
  * Returns the current user's role and convenience boolean flags.
  */
 export function useRole() {
-  const { data: session, isPending } = useSession();
+  const { data: session, isPending } = useSessionContext();
 
   // Type assertion needed because customSessionClient adds role dynamically
   const role = ((session?.user as { role?: string } | null)?.role ?? "user") as UserRole;
