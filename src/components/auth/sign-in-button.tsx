@@ -6,10 +6,11 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { signIn, useSession } from "@/lib/auth-client"
+import { useSessionContext } from "@/contexts/session-context"
+import { signIn } from "@/lib/auth-client"
 
 export function SignInButton() {
-  const { data: session, isPending: sessionPending } = useSession()
+  const { data: session, isPending: sessionPending } = useSessionContext()
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")

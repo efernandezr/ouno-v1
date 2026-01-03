@@ -6,10 +6,10 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Sparkles, Clock, User, Mic } from "lucide-react";
 import { OunoLogo } from "@/components/brand/OunoLogo";
 import { Button } from "@/components/ui/button";
-import { useSession } from "@/lib/auth-client";
+import { useSessionContext } from "@/contexts/session-context";
 
 export default function Home() {
-  const { data: session, isPending } = useSession();
+  const { data: session, isPending } = useSessionContext();
   const router = useRouter();
 
   useEffect(() => {

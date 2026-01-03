@@ -27,7 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CalibrationFlow } from "@/components/voice-dna/CalibrationFlow";
 import { StrengthIndicator } from "@/components/voice-dna/StrengthIndicator";
 import { VoiceDNACard } from "@/components/voice-dna/VoiceDNACard";
-import { useSession } from "@/lib/auth-client";
+import { useSessionContext } from "@/contexts/session-context";
 import type { VoiceDNA, LearnedRule } from "@/types/voiceDNA";
 
 interface VoiceDNAResponse {
@@ -47,7 +47,7 @@ interface VoiceDNAResponse {
 }
 
 export default function VoiceDNASettingsPage() {
-  const { data: session, isPending: sessionPending } = useSession();
+  const { data: session, isPending: sessionPending } = useSessionContext();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [showCalibration, setShowCalibration] = useState(false);

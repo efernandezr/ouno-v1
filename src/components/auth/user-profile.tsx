@@ -13,11 +13,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useSessionContext } from "@/contexts/session-context";
 import { useRole } from "@/hooks/useRole";
-import { useSession, signOut } from "@/lib/auth-client";
+import { signOut } from "@/lib/auth-client";
 
 export function UserProfile() {
-  const { data: session, isPending } = useSession();
+  const { data: session, isPending } = useSessionContext();
   const { isAdmin } = useRole();
   const router = useRouter();
 

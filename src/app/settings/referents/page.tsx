@@ -28,11 +28,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useSession } from "@/lib/auth-client";
+import { useSessionContext } from "@/contexts/session-context";
 import type { ReferentInfluences, VoiceDNA } from "@/types/voiceDNA";
 
 export default function ReferentSettingsPage() {
-  const { data: session, isPending: sessionPending } = useSession();
+  const { data: session, isPending: sessionPending } = useSessionContext();
   const router = useRouter();
   const queryClient = useQueryClient();
 

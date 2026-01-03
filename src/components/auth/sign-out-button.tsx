@@ -2,10 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { signOut, useSession } from "@/lib/auth-client";
+import { useSessionContext } from "@/contexts/session-context";
+import { signOut } from "@/lib/auth-client";
 
 export function SignOutButton() {
-  const { data: session, isPending } = useSession();
+  const { data: session, isPending } = useSessionContext();
   const router = useRouter();
 
   if (isPending) {
