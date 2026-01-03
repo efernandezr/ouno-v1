@@ -26,7 +26,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalibrationFlow } from "@/components/voice-dna/CalibrationFlow";
 import { StrengthIndicator } from "@/components/voice-dna/StrengthIndicator";
-import { VoiceDNACard } from "@/components/voice-dna/VoiceDNACard";
 import { useSessionContext } from "@/contexts/session-context";
 import type { VoiceDNA, LearnedRule } from "@/types/voiceDNA";
 

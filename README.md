@@ -26,8 +26,9 @@ The app learns your unique communication style:
 1. Record your voice → transcribed automatically
 2. AI analyzes for enthusiasm and key topics
 3. Follow-up questions draw out more depth
-4. Content generated using your Ouno Core profile
-5. Refine and iterate until perfect
+4. Select content template (Standard Article, Key Points, Personal Story)
+5. Content generated using your Ouno Core profile
+6. Refine and iterate via Voice Refine
 
 ### Writing Samples & Calibration
 - **Smart URL Import**: Paste a URL and AI extracts just the article content (no navigation, footers, ads)
@@ -37,12 +38,19 @@ The app learns your unique communication style:
 - Rate AI-generated samples and provide feedback
 - Profile improves with each interaction
 
+### Admin Panel
+- Role-based access control (admin/user roles)
+- User management dashboard
+- View and edit user details
+- Monitor system usage
+
 ## Tech Stack
 
 - **Framework**: Next.js 16 with App Router, React 19, TypeScript
 - **AI Integration**: Vercel AI SDK 5 + OpenRouter (100+ AI models)
-- **Authentication**: BetterAuth with Email/Password
+- **Authentication**: BetterAuth with Email/Password + Google OAuth
 - **Database**: PostgreSQL with Drizzle ORM
+- **State Management**: TanStack React Query v5 + React Context
 - **UI**: shadcn/ui components with Tailwind CSS 4
 - **Styling**: Dark mode support via next-themes
 
@@ -93,7 +101,12 @@ The app learns your unique communication style:
    pnpm db:push
    ```
 
-5. **Start the development server**
+5. **Seed admin user (optional)**
+   ```bash
+   pnpm db:seed-admin
+   ```
+
+6. **Start the development server**
    ```bash
    pnpm dev
    ```
@@ -105,32 +118,54 @@ The app learns your unique communication style:
 ```
 src/
 ├── app/
-│   ├── (auth)/              # Auth routes (login, register)
+│   ├── (auth)/              # Auth routes (login, register, forgot-password)
 │   ├── api/
 │   │   ├── auth/            # BetterAuth catch-all
-│   │   ├── voice/           # Voice upload, transcription
+│   │   ├── voice/           # Voice upload, transcription, analysis
 │   │   ├── voice-dna/       # Ouno Core profile management
 │   │   ├── session/         # Spark session management
-│   │   ├── content/         # Content generation
+│   │   ├── content/         # Content generation & refinement
 │   │   ├── calibration/     # Calibration rounds
-│   │   └── samples/         # Writing samples
+│   │   ├── samples/         # Writing samples
+│   │   └── admin/           # Admin user management
 │   ├── dashboard/           # User dashboard
 │   ├── record/              # Voice recording pages
+│   │   ├── quick/           # Thought Stream mode
+│   │   └── guided/          # Deep Dive mode
 │   ├── session/[id]/        # Spark detail view
-│   ├── content/             # Content viewing/editing
-│   └── settings/            # User settings
+│   ├── content/             # Content viewing/editing/library
+│   ├── onboarding/          # Onboarding wizard
+│   ├── settings/            # User settings (voice-dna, referents)
+│   ├── admin/               # Admin panel (protected)
+│   │   ├── users/           # User management
+│   │   └── users/[id]/      # User detail view
+│   └── profile/             # User profile
 ├── components/
+│   ├── ui/                  # shadcn/ui components
+│   ├── providers/           # React Query provider
+│   ├── auth/                # Authentication components
 │   ├── brand/               # Logo components
 │   ├── voice/               # Voice recorder, visualizer
 │   ├── voice-dna/           # Ouno Core components
 │   ├── samples/             # Writing sample upload/view
 │   ├── session/             # Spark components
 │   ├── content/             # Content display/editing
-│   └── ui/                  # shadcn/ui components
+│   ├── dashboard/           # Dashboard cards
+│   ├── onboarding/          # Wizard steps
+│   ├── admin/               # Admin panel components
+│   └── referents/           # Style influence components
+├── contexts/
+│   └── session-context.tsx  # Centralized auth session
+├── hooks/
+│   ├── useRole.ts           # Role-based access hook
+│   └── useSampleUpload.ts   # Sample upload logic
 ├── lib/
 │   ├── auth.ts              # BetterAuth config
+│   ├── auth-client.ts       # BetterAuth client hooks
 │   ├── db.ts                # Database connection
 │   ├── schema.ts            # Drizzle schema
+│   ├── roles.ts             # Role hierarchy & guards
+│   ├── validation.ts        # Input validation helpers
 │   └── analysis/            # AI analysis modules
 └── types/                   # TypeScript definitions
 ```
@@ -138,14 +173,15 @@ src/
 ## Available Scripts
 
 ```bash
-pnpm dev          # Start dev server
-pnpm build        # Build for production
+pnpm dev          # Start dev server (with Turbopack)
+pnpm build        # Build for production (runs migrations)
 pnpm lint         # Run ESLint
 pnpm typecheck    # TypeScript checking
 pnpm db:generate  # Generate migrations
 pnpm db:migrate   # Run migrations
 pnpm db:push      # Push schema changes
 pnpm db:studio    # Open Drizzle Studio
+pnpm db:seed-admin # Seed admin user
 ```
 
 ## Terminology
@@ -158,13 +194,40 @@ pnpm db:studio    # Open Drizzle Studio
 | `voice_sessions` | Sparks |
 | "The AI" | The Editor |
 
+## Architecture Highlights
+
+### State Management
+- **Session Context**: Centralized auth session reduces duplicate queries
+- **React Query**: Efficient caching with 5-min stale time, 10-min garbage collection
+- **Local State**: useState for UI state (modals, forms, tabs)
+
+### Authentication
+- BetterAuth with session caching (5-minute cookie cache)
+- Role-based access control (admin/user hierarchy)
+- Server-side protection for admin routes
+- Email verification + password reset flows
+
+### Data Flow
+```
+Voice Recording → Transcription (OpenAI Whisper)
+                        ↓
+              Analysis (Enthusiasm, Patterns)
+                        ↓
+              Follow-up Questions
+                        ↓
+              Content Generation (OpenRouter)
+                        ↓
+              Voice Refine (Iterations)
+```
+
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+3. Run lint and typecheck (`pnpm lint && pnpm typecheck`)
+4. Commit your changes (`git commit -m 'Add amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
 
 ## License
 

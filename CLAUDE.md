@@ -37,8 +37,9 @@ The app learns each user's unique "Ouno Core"—their speaking patterns, vocabul
 
 - **Framework**: Next.js 16 with App Router, React 19, TypeScript
 - **AI Integration**: Vercel AI SDK 5 + OpenRouter (access to 100+ AI models)
-- **Authentication**: BetterAuth with Email/Password
+- **Authentication**: BetterAuth with Email/Password + Google OAuth
 - **Database**: PostgreSQL with Drizzle ORM
+- **State Management**: TanStack React Query v5 + React Context
 - **UI**: shadcn/ui components with Tailwind CSS 4
 - **Styling**: Tailwind CSS with dark mode support (next-themes)
 - **Typography**: Inter font family via `next/font/google`
@@ -76,6 +77,12 @@ The app learns each user's unique "Ouno Core"—their speaking patterns, vocabul
 - Feedback improves Ouno Core accuracy
 - Learned rules stored for future generations
 
+### 6. Admin Panel
+- Role-based access control (admin/user hierarchy)
+- User management dashboard at `/admin/users`
+- View and edit user details
+- Server-side protection via `requireAdmin()` guard
+
 ## Project Structure
 
 ```
@@ -95,20 +102,31 @@ src/
 │   │   ├── onboarding/          # Onboarding flow endpoints
 │   │   ├── calibration/         # Calibration rounds
 │   │   ├── referents/           # Referent creators
-│   │   └── samples/             # Writing samples
+│   │   ├── samples/             # Writing samples
+│   │   └── admin/               # Admin user management
+│   │       └── users/           # User CRUD
 │   ├── dashboard/               # User dashboard
 │   ├── record/                  # Voice recording pages
 │   │   ├── quick/               # Thought Stream mode
 │   │   └── guided/              # Deep Dive mode
 │   ├── session/[id]/            # Spark detail view
 │   ├── content/                 # Content viewing/editing
+│   │   ├── [id]/                # Content detail
+│   │   └── library/             # Content library
 │   ├── onboarding/              # Onboarding wizard
 │   ├── settings/                # User settings
+│   │   ├── voice-dna/           # Ouno Core settings
+│   │   └── referents/           # Style influences
+│   ├── admin/                   # Admin panel (protected)
+│   │   ├── users/               # User management
+│   │   └── users/[id]/          # User detail view
 │   └── profile/                 # User profile
 ├── components/
 │   ├── auth/                    # Authentication components
 │   ├── brand/                   # Brand components
 │   │   └── OunoLogo.tsx         # Reusable logo (LogoMark + LogoText)
+│   ├── providers/               # Context providers
+│   │   └── query-provider.tsx   # TanStack React Query setup
 │   ├── voice/                   # Voice recording components
 │   │   ├── VoiceRecorder.tsx    # Main recorder component
 │   │   ├── AudioVisualizer.tsx  # Real-time audio visualization
@@ -127,15 +145,34 @@ src/
 │   ├── content/                 # Content display/editing
 │   │   ├── TemplateSelector.tsx # Content format selector (3 templates)
 │   │   └── VoiceRefine.tsx      # Voice-based content refinement
+│   ├── dashboard/               # Dashboard components
+│   │   ├── QuickActions.tsx     # Thought Stream + Deep Dive buttons
+│   │   ├── RecentContent.tsx    # Recent articles list
+│   │   └── VoiceDNAStatus.tsx   # Compact Ouno Core card
 │   ├── onboarding/              # Onboarding components
+│   ├── admin/                   # Admin panel components
+│   │   ├── AdminSidebar.tsx     # Admin navigation
+│   │   ├── UserList.tsx         # User table
+│   │   └── UserDetail.tsx       # User editing
+│   ├── referents/               # Referent components
 │   └── ui/                      # shadcn/ui components
+├── contexts/
+│   └── session-context.tsx      # Centralized auth session
+├── hooks/
+│   ├── useRole.ts               # Role-based access hook
+│   └── useSampleUpload.ts       # Sample upload logic
 ├── lib/
 │   ├── auth.ts                  # BetterAuth server config
 │   ├── auth-client.ts           # BetterAuth client hooks
 │   ├── db.ts                    # Database connection
 │   ├── schema.ts                # Drizzle schema
+│   ├── roles.ts                 # Role hierarchy & guards
+│   ├── validation.ts            # Input validation helpers
 │   ├── storage.ts               # File storage (Vercel Blob / local)
-│   └── utils.ts                 # Utility functions
+│   ├── analysis/                # AI analysis modules
+│   │   └── voiceDNABuilder.ts   # Core Ouno Core logic
+│   └── content/                 # Content generation
+│       └── promptComposer.ts    # Prompt engineering
 └── types/
     ├── voice.ts                 # Voice recording types
     ├── voiceDNA.ts              # Ouno Core profile types
@@ -145,13 +182,90 @@ src/
     └── referent.ts              # Referent creator types
 ```
 
+## State Management Architecture
+
+### Session Context Pattern
+The app uses a centralized session context to reduce duplicate auth queries from 5-7 to 1:
+
+```typescript
+// src/contexts/session-context.tsx
+import { useSessionContext } from "@/contexts/session-context";
+
+// In components:
+const { data: session, isPending } = useSessionContext();
+```
+
+**Usage:**
+- Client components: `useSessionContext()` (from context)
+- Server components: `getSession()` or `getSessionWithRole()` (from BetterAuth)
+- API routes: `auth.api.getSession({ headers: await headers() })`
+
+### React Query Integration
+TanStack React Query v5 provides efficient caching and data synchronization:
+
+```typescript
+// Configuration (src/components/providers/query-provider.tsx)
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,      // 5 minutes
+      gcTime: 10 * 60 * 1000,        // 10 minutes garbage collection
+      retry: 1,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,         // Only fetch if stale
+    },
+  },
+});
+```
+
+**Usage in components:**
+```typescript
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
+const { data, isLoading } = useQuery({
+  queryKey: ["voice-dna", "full"],
+  queryFn: async () => {
+    const response = await fetch("/api/voice-dna");
+    return response.json();
+  },
+  enabled: !!session,
+});
+```
+
+### Authorization Hooks
+
+**Client-side:**
+```typescript
+import { useRole } from "@/hooks/useRole";
+
+const { role, isAdmin, isPending } = useRole();
+```
+
+**Server-side (pages):**
+```typescript
+import { requireAdmin } from "@/lib/roles";
+
+// In server component or layout:
+await requireAdmin("/dashboard"); // Redirects if not admin
+```
+
+**API routes:**
+```typescript
+import { checkAdminApi } from "@/lib/roles";
+
+const adminCheck = await checkAdminApi();
+if (!adminCheck.authorized) {
+  return NextResponse.json(adminCheck.error, { status: adminCheck.error.status });
+}
+```
+
 ## Database Schema
 
 ### Core Tables
 
 | Table | Purpose |
 |-------|---------|
-| `user` | User accounts with onboarding status |
+| `user` | User accounts with onboarding status and role |
 | `voice_dna_profiles` | Ouno Core data per user |
 | `voice_sessions` | Spark recordings with transcripts |
 | `generated_content` | Blog posts/articles from Sparks |
@@ -161,11 +275,55 @@ src/
 
 ### Key Enums
 
-- `onboarding_status`: not_started, voice_intro, follow_ups, samples, complete
-- `session_mode`: quick (Thought Stream), guided (Deep Dive)
-- `session_status`: recording, transcribing, analyzing, follow_ups, generating, complete, error
-- `content_status`: draft, final, published
-- `content_template`: blog_post (Standard Article), listicle (Key Points), narrative (Personal Story)
+```typescript
+onboarding_status: not_started, voice_intro, follow_ups, samples, complete
+session_mode: quick (Thought Stream), guided (Deep Dive)
+session_status: recording, transcribing, analyzing, follow_ups, generating, complete, error
+content_status: draft, final, published
+content_template: blog_post (Standard Article), listicle (Key Points), narrative (Personal Story)
+user_role: admin, user
+```
+
+### Role Hierarchy
+
+```typescript
+// src/lib/roles.ts
+const ROLE_HIERARCHY = {
+  admin: 100,
+  user: 10,
+};
+```
+
+## API Routes Reference
+
+### Voice Processing
+| Method | Route | Purpose |
+|--------|-------|---------|
+| POST | `/api/voice/upload` | Upload audio file (max 25MB) |
+| POST | `/api/voice/transcribe` | Transcribe audio via Whisper |
+| POST | `/api/voice/analyze` | Analyze transcript, build Ouno Core |
+
+### Content
+| Method | Route | Purpose |
+|--------|-------|---------|
+| GET | `/api/content` | List user's content |
+| POST | `/api/content/generate` | Generate content from Spark |
+| GET | `/api/content/[id]` | Get content detail |
+| POST | `/api/content/[id]/refine` | Refine content via voice/text |
+
+### Voice DNA
+| Method | Route | Purpose |
+|--------|-------|---------|
+| GET | `/api/voice-dna` | Get user's Ouno Core profile |
+| PATCH | `/api/voice-dna` | Update profile |
+| POST | `/api/voice-dna/rebuild` | Rebuild from all sources |
+
+### Admin
+| Method | Route | Purpose |
+|--------|-------|---------|
+| GET | `/api/admin/users` | List users (paginated) |
+| GET | `/api/admin/users/[id]` | Get user detail |
+| PATCH | `/api/admin/users/[id]` | Update user role |
 
 ## Environment Variables
 
@@ -179,6 +337,9 @@ BETTER_AUTH_SECRET=32-char-random-string
 # AI via OpenRouter
 OPENROUTER_API_KEY=sk-or-v1-your-key
 OPENROUTER_MODEL=openai/gpt-4o-mini
+
+# OpenAI (for Whisper transcription)
+OPENAI_API_KEY=sk-your-openai-key
 
 # App
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -198,6 +359,7 @@ pnpm db:generate  # Generate migrations
 pnpm db:migrate   # Run migrations
 pnpm db:push      # Push schema changes
 pnpm db:studio    # Open Drizzle Studio
+pnpm db:seed-admin # Seed admin user
 ```
 
 ## Guidelines for AI Assistants
@@ -211,9 +373,10 @@ pnpm db:studio    # Open Drizzle Studio
 
 2. **NEVER start the dev server yourself** - ask user for output
 
-3. **Use OpenRouter, NOT OpenAI directly**
+3. **Use OpenRouter, NOT OpenAI directly** for content generation
    - Import: `import { openrouter } from "@openrouter/ai-sdk-provider"`
    - Model format: `provider/model-name`
+   - OpenAI is only used for Whisper transcription
 
 4. **Understand the data flow**:
    - Voice → Transcript → Analysis → Follow-ups → Content
@@ -230,6 +393,14 @@ pnpm db:studio    # Open Drizzle Studio
 7. **Use correct terminology**:
    - User-facing: "Ouno Core", "Thought Stream", "Deep Dive", "Spark", "The Editor"
    - Internal/API: `voice_dna_profiles`, `quick`, `guided`, `voice_sessions`
+
+8. **Use the session context**:
+   - Client components: `useSessionContext()` (not `useSession()` directly)
+   - This reduces duplicate auth queries
+
+9. **Use React Query for data fetching**:
+   - Configured in `src/components/providers/query-provider.tsx`
+   - 5-minute stale time, automatic caching
 
 ### Common Tasks
 
@@ -261,6 +432,12 @@ pnpm db:studio    # Open Drizzle Studio
 4. API routes: `src/app/api/samples/` (GET list, POST create) and `src/app/api/samples/[id]/` (GET full content, DELETE)
 5. Components in `src/components/samples/`
 6. Samples are analyzed and merged into Ouno Core profile automatically via `rebuildVoiceDNA()`
+
+**Working with admin panel:**
+1. Protected by `requireAdmin()` in layout (`src/app/admin/layout.tsx`)
+2. API routes require `checkAdminApi()` guard
+3. Components in `src/components/admin/`
+4. Use `useRole()` hook for client-side role checks
 
 **Using the logo:**
 ```tsx
@@ -303,6 +480,46 @@ interface VoiceSession {
 }
 ```
 
+### Error Handling Patterns
+
+API routes follow a consistent error handling pattern:
+
+```typescript
+export async function POST(request: Request) {
+  try {
+    // 1. Authenticate
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // 2. Validate input
+    const body = await request.json();
+    if (!body.required) {
+      return NextResponse.json({ error: "Missing field" }, { status: 400 });
+    }
+
+    // 3. Check authorization (for protected resources)
+    if (resource.userId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // 4. Do work
+    const result = await doWork();
+
+    // 5. Return success
+    return NextResponse.json({ success: true, ...result });
+
+  } catch (error) {
+    console.error("Operation error:", error);
+    return NextResponse.json(
+      { error: "Operation failed", details: error instanceof Error ? error.message : "Unknown error" },
+      { status: 500 }
+    );
+  }
+}
+```
+
 ### Best Practices
 
 - Read existing patterns before creating new features
@@ -311,6 +528,21 @@ interface VoiceSession {
 - Content should preserve the user's authentic voice
 - Calibration feedback is valuable—use it to improve
 - Refer to "The Editor" (not "the AI") in user-facing copy
+- Use `useSessionContext()` for auth state (not `useSession()` directly)
+- Use React Query for API data fetching when appropriate
+
+## Known Limitations
+
+1. **Email Service**: Password reset and verification URLs are currently logged to console only (no email service integration)
+2. **Background Processing**: All AI calls are synchronous (potential timeout risk for long operations)
+3. **URL Extraction**: Requires internet access to Jina.ai and LLM provider
+4. **Temporary Files**: Audio cleanup on non-critical errors may leave orphan files
+
+## Route Protection Levels
+
+- **Public**: `/`, `/login`, `/register`, `/forgot-password`, `/reset-password`
+- **Authenticated**: `/dashboard`, `/record`, `/onboarding`, `/settings`, `/profile`, `/content`
+- **Admin Only**: `/admin`, `/admin/users`, `/admin/users/[id]`
 
 ## Package Manager
 
